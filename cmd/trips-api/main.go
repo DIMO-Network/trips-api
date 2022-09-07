@@ -225,7 +225,7 @@ func main() {
 
 	tep := &TripEventProcessor{logger: &logger, db: db}
 	brokers := strings.Split(settings.KafkaBrokers, ",")
-	tep.runProcessor(brokers) // press ctrl-c to stop
+	go tep.runProcessor(brokers) // press ctrl-c to stop
 
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
