@@ -12,6 +12,8 @@ import (
 
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/trips-api/internal/config"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	_ "github.com/lib/pq"
 	"github.com/lovoo/goka"
 	"github.com/rs/zerolog"
@@ -29,6 +31,15 @@ type TripStatus struct {
 	DeviceID string
 	Start    time.Time
 	End      time.Time
+}
+
+type tripOngoing struct {
+	Resp bool `json:"tripOngoing"`
+}
+
+type deviceTrip struct {
+	Start time.Time `json:"tripStart"`
+	End   time.Time `json:"tripEnd"`
 }
 
 func (p *TripEventProcessor) UpdateCompletedTrip(trp TripStatus) error {
@@ -83,6 +94,82 @@ func (p *TripEventProcessor) uniqueTripID(userID string, startTime time.Time) ui
 	h := fnv.New32()
 	h.Write([]byte(userID + start))
 	return h.Sum32()
+}
+
+func (p *TripEventProcessor) allOngoingTrips(c *fiber.Ctx) error {
+
+	ongoingTrips := make([]string, 0)
+	sqlQuery := `SELECT DISTINCT deviceid FROM fulltrips WHERE tripend IS NULL;`
+	rows, err := p.db.Query(sqlQuery)
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		var device string
+		err := rows.Scan(&device)
+		if err != nil {
+			return err
+		}
+		ongoingTrips = append(ongoingTrips, device)
+	}
+
+	return c.JSON(ongoingTrips)
+}
+
+func (p *TripEventProcessor) deviceTripOngoing(c *fiber.Ctx) error {
+
+	response := tripOngoing{}
+
+	deviceID := c.Params("deviceID")
+	sqlQuery := `SELECT 
+					CASE WHEN tripend IS NULL THEN TRUE
+					ELSE FALSE 
+					END AS ongoingtrip
+					FROM fulltrips
+					WHERE deviceid = $1
+					ORDER BY tripend DESC
+					LIMIT 1;`
+	rows, err := p.db.Query(sqlQuery, deviceID)
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		err := rows.Scan(&response.Resp)
+		if err != nil {
+			return err
+		}
+	}
+
+	return c.JSON(response)
+}
+
+func (p *TripEventProcessor) allDeviceTrips(c *fiber.Ctx) error {
+
+	response := []deviceTrip{}
+	deviceID := c.Params("deviceID")
+	sqlQuery := `SELECT 
+					tripstart, tripend
+					FROM fulltrips
+					WHERE deviceid = $1
+					AND tripend IS NOT NULL
+					ORDER BY tripend DESC;`
+	rows, err := p.db.Query(sqlQuery, deviceID)
+	if err != nil {
+		return err
+	}
+
+	for rows.Next() {
+		trp := deviceTrip{}
+		err := rows.Scan(&trp.Start, &trp.End)
+		if err != nil {
+			return err
+		}
+		response = append(response, trp)
+	}
+
+	return c.JSON(response)
 }
 
 // process messages until ctrl-c is pressed
@@ -142,5 +229,20 @@ func main() {
 	}
 
 	tp := &TripEventProcessor{logger: &logger, db: db}
-	tp.runProcessor() // press ctrl-c to stop
+	go tp.runProcessor() // press ctrl-c to stop
+
+	app := fiber.New()
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+	}))
+
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.SendString("Hello, World!")
+	})
+	app.Get("/ongoing/all", tp.allOngoingTrips)
+	app.Get("/ongoing/:deviceID", tp.deviceTripOngoing)
+	app.Get("/alltrips/:deviceID", tp.allDeviceTrips)
+
+	app.Listen(":8000")
+
 }
