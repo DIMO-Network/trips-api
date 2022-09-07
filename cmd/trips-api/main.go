@@ -7,6 +7,7 @@ import (
 	"hash/fnv"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -20,9 +21,8 @@ import (
 )
 
 var (
-	brokers                = []string{"localhost:9092"}
-	group      goka.Group  = "trips-api"
-	tripStatus goka.Stream = "topic.device.trip.event"
+	group     goka.Group  = "trips-api"
+	tripTopic goka.Stream = "topic.device.trip.event"
 )
 
 var tripStatusCodec = &shared.JSONCodec[TripStatus]{}
@@ -43,7 +43,6 @@ type deviceTrip struct {
 }
 
 func (p *TripEventProcessor) UpdateCompletedTrip(trp TripStatus) error {
-
 	query := `UPDATE fulltrips SET tripend = $1 WHERE deviceid = $2 AND tripid = $3`
 	_, err := p.db.Exec(query, trp.End, trp.DeviceID, p.uniqueTripID(trp.DeviceID, trp.Start))
 	if err != nil {
@@ -63,13 +62,11 @@ func (p *TripEventProcessor) BeginNewTrip(trp TripStatus) error {
 }
 
 func (p *TripEventProcessor) listenForTrips(ctx goka.Context, msg any) {
-
 	ongoingTrip := msg.(*TripStatus)
 
 	if !ongoingTrip.End.IsZero() {
 		err := p.UpdateCompletedTrip(*ongoingTrip)
 		if err != nil {
-			fmt.Println(err)
 			p.logger.Err(err)
 		}
 		return
@@ -77,7 +74,6 @@ func (p *TripEventProcessor) listenForTrips(ctx goka.Context, msg any) {
 
 	err := p.BeginNewTrip(*ongoingTrip)
 	if err != nil {
-		fmt.Println(err)
 		p.logger.Err(err)
 	}
 
@@ -89,7 +85,6 @@ type TripEventProcessor struct {
 }
 
 func (p *TripEventProcessor) uniqueTripID(userID string, startTime time.Time) uint32 {
-
 	start := startTime.Format("2006-01-02 15:04:05")
 	h := fnv.New32()
 	h.Write([]byte(userID + start))
@@ -173,11 +168,11 @@ func (p *TripEventProcessor) allDeviceTrips(c *fiber.Ctx) error {
 }
 
 // process messages until ctrl-c is pressed
-func (p *TripEventProcessor) runProcessor() {
+func (p *TripEventProcessor) runProcessor(brokers []string) {
 	// Define a new processor group. The group defines all inputs, outputs, and
 	// serialization formats. The group-table topic is "example-group-table".
 	g := goka.DefineGroup(group,
-		goka.Input(tripStatus, tripStatusCodec, p.listenForTrips),
+		goka.Input(tripTopic, tripStatusCodec, p.listenForTrips),
 	)
 
 	proc, err := goka.NewProcessor(brokers, g)
@@ -185,7 +180,10 @@ func (p *TripEventProcessor) runProcessor() {
 		p.logger.Fatal().Err(err).Msg("Failed to create processor.")
 	}
 	ctx, cancel := context.WithCancel(context.Background())
+
+	// Closure of this channel tells us that proc.Run has exited.
 	done := make(chan bool)
+
 	go func() {
 		defer close(done)
 		if err = proc.Run(ctx); err != nil {
@@ -207,9 +205,10 @@ func main() {
 
 	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
 	if err != nil {
-		logger.Fatal().Err(err).Msg("could not load settings")
+		logger.Fatal().Err(err).Msg("Failed loading settings.")
 	}
-	fmt.Println(settings)
+	logger.Info().Interface("settings", settings).Msg("Settings loaded.")
+
 	psqlInfo := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		settings.DBHost,
@@ -221,15 +220,12 @@ func main() {
 	fmt.Println(psqlInfo)
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		panic(err)
-	}
-	err = db.Ping()
-	if err != nil {
-		panic(err)
+		logger.Fatal().Err(err).Msg("Failed to creating database handle.")
 	}
 
-	tp := &TripEventProcessor{logger: &logger, db: db}
-	go tp.runProcessor() // press ctrl-c to stop
+	tep := &TripEventProcessor{logger: &logger, db: db}
+	brokers := strings.Split(settings.KafkaBrokers, ",")
+	tep.runProcessor(brokers) // press ctrl-c to stop
 
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
@@ -239,9 +235,9 @@ func main() {
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
 	})
-	app.Get("/ongoing/all", tp.allOngoingTrips)
-	app.Get("/ongoing/:deviceID", tp.deviceTripOngoing)
-	app.Get("/alltrips/:deviceID", tp.allDeviceTrips)
+	app.Get("/ongoing/all", tep.allOngoingTrips)
+	app.Get("/ongoing/:deviceID", tep.deviceTripOngoing)
+	app.Get("/alltrips/:deviceID", tep.allDeviceTrips)
 
 	app.Listen(":8000")
 
