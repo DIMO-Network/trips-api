@@ -82,6 +82,7 @@ func (p *TripEventProcessor) listenForTrips(ctx goka.Context, msg any) {
 type TripEventProcessor struct {
 	logger *zerolog.Logger
 	db     *sql.DB
+	done   chan bool
 }
 
 func (p *TripEventProcessor) uniqueTripID(userID string, startTime time.Time) uint32 {
@@ -168,7 +169,7 @@ func (p *TripEventProcessor) allDeviceTrips(c *fiber.Ctx) error {
 }
 
 // process messages until ctrl-c is pressed
-func (p *TripEventProcessor) runProcessor(brokers []string) {
+func (p *TripEventProcessor) runProcessor(ctx context.Context, brokers []string) {
 	// Define a new processor group. The group defines all inputs, outputs, and
 	// serialization formats. The group-table topic is "example-group-table".
 	g := goka.DefineGroup(group,
@@ -179,28 +180,20 @@ func (p *TripEventProcessor) runProcessor(brokers []string) {
 	if err != nil {
 		p.logger.Fatal().Err(err).Msg("Failed to create processor.")
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-
-	// Closure of this channel tells us that proc.Run has exited.
-	done := make(chan bool)
 
 	go func() {
-		defer close(done)
-		if err = proc.Run(ctx); err != nil {
+		defer close(p.done)
+		if err := proc.Run(ctx); err != nil {
 			p.logger.Fatal().Err(err).Msg("Processor terminated with an error.")
 		} else {
 			p.logger.Info().Msg("Processor shut down cleanly.")
 		}
 	}()
-
-	wait := make(chan os.Signal, 1)
-	signal.Notify(wait, syscall.SIGINT, syscall.SIGTERM)
-	<-wait
-	cancel() // Stop Goka processor proc.
-	<-done
 }
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	logger := zerolog.New(os.Stdout).With().Timestamp().Str("app", "trips-api").Logger()
 
 	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
@@ -222,15 +215,18 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to creating database handle.")
 	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Err(err).Msg("Database handle did not shut down gracefully.")
+		}
+	}()
 
-	tep := &TripEventProcessor{logger: &logger, db: db}
+	tep := &TripEventProcessor{logger: &logger, db: db, done: make(chan bool)}
 	brokers := strings.Split(settings.KafkaBrokers, ",")
-	go tep.runProcessor(brokers) // press ctrl-c to stop
+	go tep.runProcessor(ctx, brokers) // press ctrl-c to stop
 
 	app := fiber.New()
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-	}))
+	app.Use(cors.New(cors.Config{AllowOrigins: "*"}))
 
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
@@ -239,6 +235,18 @@ func main() {
 	app.Get("/ongoing/:deviceID", tep.deviceTripOngoing)
 	app.Get("/alltrips/:deviceID", tep.allDeviceTrips)
 
-	app.Listen(":8000")
+	go func() {
+		app.Listen(":8000")
+	}()
 
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-sigChan
+	logger.Info().Str("signal", sig.String()).Msg("Got signal, terminating.")
+	cancel()
+	<-tep.done
+	err = app.Shutdown()
+	if err != nil {
+		logger.Err(err).Msg("HTTP server did not shut down gracefully.")
+	}
 }
