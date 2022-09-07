@@ -1,0 +1,6 @@
+DB_USER: postgres
+DB_PASSWORD: postgres
+DB_PORT: 5433
+DB_HOST: localhost
+DB_NAME: pg_db
+KAFKA_BROKERS: localhost:9092
