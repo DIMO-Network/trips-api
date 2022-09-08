@@ -4,4 +4,4 @@ DB_PORT: 5433
 DB_HOST: localhost
 DB_NAME: pg_db
 KAFKA_BROKERS: localhost:9092
-JWT_KEY_SET_URL: https://auth.dimo.zone/keys
+JWT_KEY_SET_URL: https://auth.dev.dimo.zone/keys

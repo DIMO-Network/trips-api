@@ -9,7 +9,7 @@ type Settings struct {
 	DBHost       string `yaml:"DB_HOST"`
 	DBName       string `yaml:"DB_NAME"`
 	KafkaBrokers string `yaml:"KAFKA_BROKERS"`
-	JwtKeySetURL string `yaml:"JWT_KEY_SET_URL"`
+	JWTKeySetURL string `yaml:"JWT_KEY_SET_URL"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

@@ -39,7 +39,7 @@ func NewDatabaseConnection(settings config.Settings, logger zerolog.Logger) Post
 		logger.Fatal().Err(err).Msg("Failed to creating database handle.")
 	}
 
-	return PostgresController{Db: db, devicesAPIGRPCAddr: settings.JwtKeySetURL}
+	return PostgresController{Db: db, devicesAPIGRPCAddr: settings.JWTKeySetURL}
 }
 
 func (p *PostgresController) AllOngoingTrips(c *fiber.Ctx) error {
