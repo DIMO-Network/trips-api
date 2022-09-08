@@ -18,7 +18,10 @@ require (
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
+	github.com/gofiber/utils v0.0.10 // indirect
 	github.com/gofrs/uuid v3.2.0+incompatible // indirect
+	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
+	github.com/gorilla/schema v1.1.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -51,7 +54,9 @@ require (
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
+	github.com/gofiber/fiber v1.14.6
 	github.com/gofiber/fiber/v2 v2.37.1
+	github.com/gofiber/jwt/v3 v3.3.0
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
@@ -71,6 +76,8 @@ require (
 	github.com/pressly/goose v2.7.0+incompatible
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
 	github.com/syndtr/goleveldb v1.0.0 // indirect
+	github.com/volatiletech/null v8.0.0+incompatible
+	github.com/volatiletech/sqlboiler v3.7.1+incompatible
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
 	golang.org/x/net v0.0.0-20220812174116-3211cb980234 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
