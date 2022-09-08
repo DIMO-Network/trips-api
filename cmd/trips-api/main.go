@@ -46,8 +46,8 @@ func main() {
 		services.MigrateDatabase(logger, &settings, command, "trips_api")
 	default:
 
-		db := database.NewDatabaseConnection(settings, logger)
-		tep := kafka.NewTripEventProcessor(&logger, db.DB)
+		pgController := database.NewDatabaseConnection(settings, logger)
+		tep := kafka.NewTripEventProcessor(&logger, pgController.Db)
 		brokers := strings.Split(settings.KafkaBrokers, ",")
 		go tep.RunProcessor(ctx, brokers) // press ctrl-c to stop
 
@@ -58,15 +58,21 @@ func main() {
 			KeySetURL:            settings.JwtKeySetURL,
 			KeyRefreshInterval:   &keyRefreshInterval,
 			KeyRefreshUnknownKID: &keyRefreshUnknownKID,
+			// SuccessHandler: func(c *fiber.Ctx) error {
+			// 	return nil
+			// },
+			// ErrorHandler: func(c *fiber.Ctx, err error) error {
+			// 	return err
+			// },
 		})
 
 		app.Use(cors.New(cors.Config{AllowOrigins: "*"}))
 
-		app.Get("/ongoing/all", db.AllOngoingTrips)
+		app.Get("/ongoing/all", pgController.AllOngoingTrips)
 
 		app.Group("/devices/:id", jwtAuth)
-		app.Get("/ongoing", db.DeviceTripOngoing)
-		app.Get("/alltrips", db.AllDeviceTrips)
+		app.Get("/ongoing", pgController.DeviceTripOngoing)
+		app.Get("/alltrips", pgController.AllDeviceTrips)
 
 		go func() {
 			app.Listen(":8000")
