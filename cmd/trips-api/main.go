@@ -7,6 +7,7 @@ import (
 	"hash/fnv"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -21,6 +22,7 @@ import (
 	"github.com/pressly/goose"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/null/v8"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
@@ -37,46 +39,43 @@ type TripStatus struct {
 	End      time.Time
 }
 
-type tripOngoing struct {
-	Resp bool `json:"tripOngoing"`
-}
+func (p *TripEventProcessor) UpdateCompletedTrip(ctx context.Context, trp TripStatus) error {
+	tid := strconv.Itoa(int(p.uniqueTripID(trp.DeviceID, trp.Start)))
 
-type deviceTrip struct {
-	Start time.Time `json:"tripStart"`
-	End   time.Time `json:"tripEnd"`
-}
-
-func (p *TripEventProcessor) UpdateCompletedTrip(trp TripStatus) error {
-	query := `UPDATE fulltrips SET tripend = $1 WHERE deviceid = $2 AND tripid = $3`
-	_, err := p.db.Exec(query, trp.End, trp.DeviceID, p.uniqueTripID(trp.DeviceID, trp.Start))
+	tm, err := models.FindFulltrip(ctx, p.db, tid)
 	if err != nil {
 		return err
 	}
-	return nil
+
+	tm.TripEnd = null.TimeFrom(trp.End)
+	_, err = tm.Update(ctx, p.db, boil.Infer())
+
+	return err
 }
 
-func (p *TripEventProcessor) BeginNewTrip(trp TripStatus) error {
+func (p *TripEventProcessor) BeginNewTrip(ctx context.Context, trp TripStatus) error {
+	tid := strconv.Itoa(int(p.uniqueTripID(trp.DeviceID, trp.Start)))
 
-	query := `INSERT INTO fulltrips (deviceid, tripstart, tripid) VALUES ($1, $2, $3)`
-	_, err := p.db.Exec(query, trp.DeviceID, trp.Start, p.uniqueTripID(trp.DeviceID, trp.Start))
-	if err != nil {
-		return err
+	newTrip := models.Fulltrip{
+		TripID:    tid,
+		DeviceID:  null.StringFrom(trp.DeviceID),
+		TripStart: null.TimeFrom(trp.Start),
 	}
-	return nil
+	return newTrip.Insert(ctx, p.db, boil.Infer())
 }
 
 func (p *TripEventProcessor) listenForTrips(ctx goka.Context, msg any) {
 	ongoingTrip := msg.(*TripStatus)
 
 	if !ongoingTrip.End.IsZero() {
-		err := p.UpdateCompletedTrip(*ongoingTrip)
+		err := p.UpdateCompletedTrip(ctx.Context(), *ongoingTrip)
 		if err != nil {
 			p.logger.Err(err)
 		}
 		return
 	}
 
-	err := p.BeginNewTrip(*ongoingTrip)
+	err := p.BeginNewTrip(ctx.Context(), *ongoingTrip)
 	if err != nil {
 		p.logger.Err(err)
 	}
@@ -113,8 +112,8 @@ func (p *TripEventProcessor) allOngoingTrips(c *fiber.Ctx) error {
 }
 
 func (p *TripEventProcessor) deviceTripOngoing(c *fiber.Ctx) error {
-
 	deviceID := c.Params("deviceID")
+
 	mods := []qm.QueryMod{
 		models.FulltripWhere.DeviceID.EQ(null.StringFrom(deviceID)),
 		models.FulltripWhere.TripEnd.IsNull(),
@@ -129,8 +128,8 @@ func (p *TripEventProcessor) deviceTripOngoing(c *fiber.Ctx) error {
 }
 
 func (p *TripEventProcessor) allDeviceTrips(c *fiber.Ctx) error {
-
 	deviceID := c.Params("deviceID")
+
 	mods := []qm.QueryMod{
 		models.FulltripWhere.DeviceID.EQ(null.StringFrom(deviceID)),
 		models.FulltripWhere.TripStart.IsNotNull(),
