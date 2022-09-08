@@ -98,12 +98,18 @@ func (p *TripEventProcessor) uniqueTripID(userID string, startTime time.Time) ui
 
 func (p *TripEventProcessor) allOngoingTrips(c *fiber.Ctx) error {
 
+	ongoingTrips := make([]string, 0)
+
 	resp, err := models.Fulltrips(models.FulltripWhere.TripEnd.IsNull()).All(c.Context(), p.db)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(resp)
+	for _, trp := range resp {
+		ongoingTrips = append(ongoingTrips, trp.DeviceID.String)
+	}
+
+	return c.JSON(ongoingTrips)
 }
 
 func (p *TripEventProcessor) deviceTripOngoing(c *fiber.Ctx) error {
