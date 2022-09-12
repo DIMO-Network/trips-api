@@ -17,12 +17,13 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type PostgresController struct {
+// TripDataQueryService connected to postgres db containing trip information and validates user
+type TripDataQueryService struct {
 	Db                 *sql.DB
 	devicesAPIGRPCAddr string
 }
 
-func NewDatabaseConnection(settings config.Settings, logger zerolog.Logger) PostgresController {
+func NewDatabaseConnection(settings config.Settings, logger zerolog.Logger) TripDataQueryService {
 	psqlInfo := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		settings.DBHost,
@@ -32,17 +33,15 @@ func NewDatabaseConnection(settings config.Settings, logger zerolog.Logger) Post
 		settings.DBName,
 	)
 
-	fmt.Println(psqlInfo)
-
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to creating database handle.")
 	}
 
-	return PostgresController{Db: db, devicesAPIGRPCAddr: settings.JWTKeySetURL}
+	return TripDataQueryService{Db: db, devicesAPIGRPCAddr: settings.DevicesAPIGRPCAddr}
 }
 
-func (p *PostgresController) AllOngoingTrips(c *fiber.Ctx) error {
+func (p *TripDataQueryService) AllOngoingTrips(c *fiber.Ctx) error {
 
 	ongoingTrips := make([]string, 0)
 
@@ -58,8 +57,34 @@ func (p *PostgresController) AllOngoingTrips(c *fiber.Ctx) error {
 	return c.JSON(ongoingTrips)
 }
 
-func (p *PostgresController) DeviceTripOngoing(c *fiber.Ctx) error {
+func (p *TripDataQueryService) AllUsers(c *fiber.Ctx) error {
+
+	ongoingTrips := make([]string, 0)
+
+	resp, err := models.Fulltrips(qm.Distinct(models.FulltripColumns.DeviceID)).All(c.Context(), p.Db)
+	if err != nil {
+		return err
+	}
+
+	for _, trp := range resp {
+		ongoingTrips = append(ongoingTrips, trp.DeviceID.String)
+	}
+
+	return c.JSON(ongoingTrips)
+}
+
+func (p *TripDataQueryService) DeviceTripOngoing(c *fiber.Ctx) error {
 	deviceID := c.Params("id")
+
+	userID := getUserID(c)
+	fmt.Println("uesrID: ", userID, " deviceID: ", deviceID)
+	exists, err := p.UserDeviceBelongsToUserID(c.Context(), userID, deviceID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
 
 	mods := []qm.QueryMod{
 		models.FulltripWhere.DeviceID.EQ(null.StringFrom(deviceID)),
@@ -74,14 +99,18 @@ func (p *PostgresController) DeviceTripOngoing(c *fiber.Ctx) error {
 	return c.JSON(resp)
 }
 
-func (p *PostgresController) AllDeviceTrips(c *fiber.Ctx) error {
-	userID := getUserID(c)
+func (p *TripDataQueryService) AllDeviceTrips(c *fiber.Ctx) error {
+	fmt.Println("all device trips start")
 	deviceID := c.Params("id")
 
+	userID := getUserID(c)
+	fmt.Println("uesrID: ", userID, " deviceID: ", deviceID)
 	exists, err := p.UserDeviceBelongsToUserID(c.Context(), userID, deviceID)
 	if err != nil {
+		fmt.Println("here")
 		return err
 	}
+
 	if !exists {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
@@ -101,7 +130,7 @@ func (p *PostgresController) AllDeviceTrips(c *fiber.Ctx) error {
 	return c.JSON(resp)
 }
 
-func (das *PostgresController) UserDeviceBelongsToUserID(ctx context.Context, userID, userDeviceID string) (bool, error) {
+func (das *TripDataQueryService) UserDeviceBelongsToUserID(ctx context.Context, userID, userDeviceID string) (bool, error) {
 	device, err := das.GetUserDevice(ctx, userDeviceID)
 	if err != nil {
 		return false, err
@@ -109,7 +138,7 @@ func (das *PostgresController) UserDeviceBelongsToUserID(ctx context.Context, us
 	return device.UserId == userID, nil
 }
 
-func (das *PostgresController) GetUserDevice(ctx context.Context, userDeviceID string) (*pb.UserDevice, error) {
+func (das *TripDataQueryService) GetUserDevice(ctx context.Context, userDeviceID string) (*pb.UserDevice, error) {
 	conn, err := grpc.Dial(das.devicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
