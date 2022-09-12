@@ -59,8 +59,8 @@ func main() {
 		services.MigrateDatabase(logger, &settings, command, "trips_api")
 	default:
 
-		pgController := database.NewDatabaseConnection(settings, logger)
-		tep := kafka.NewTripEventProcessor(&logger, pgController.Db)
+		tripQueryController := database.NewDatabaseConnection(settings, &logger)
+		tep := kafka.NewTripEventProcessor(&logger, tripQueryController.Pg)
 		brokers := strings.Split(settings.KafkaBrokers, ",")
 		go tep.RunProcessor(ctx, brokers) // press ctrl-c to stop
 
@@ -94,12 +94,12 @@ func main() {
 		app := fiber.New()
 
 		app.Use(cors.New(cors.Config{AllowOrigins: "*"}))
-		app.Get("/ongoing/all", pgController.AllOngoingTrips)
-		app.Get("/devices/all", pgController.AllUsers)
+		app.Get("/ongoing/all", tripQueryController.AllOngoingTrips)
+		app.Get("/devices/all", tripQueryController.AllUsers)
 
 		deviceGroup := app.Group("/devices/:id", jwtAuth)
-		deviceGroup.Get("/ongoing", pgController.DeviceTripOngoing)
-		deviceGroup.Get("/alltrips", pgController.AllDeviceTrips)
+		deviceGroup.Get("/ongoing", tripQueryController.DeviceTripOngoing)
+		deviceGroup.Get("/alltrips", tripQueryController.AllDeviceTrips)
 
 		app.Get("/", func(c *fiber.Ctx) error {
 			return c.SendString("Hello, World!")

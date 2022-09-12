@@ -12,13 +12,13 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type AggregateQueryService struct {
+type ElasticSearchQueryService struct {
 	es           *elasticsearch.Client
 	log          *zerolog.Logger
 	elasticIndex string
 }
 
-func NewESQueryService(settings config.Settings, log *zerolog.Logger) *AggregateQueryService {
+func NewESQueryService(settings config.Settings) *ElasticSearchQueryService {
 
 	esClient, err := elasticsearch.NewClient(elasticsearch.Config{
 		Addresses: []string{settings.ElasticSearchAnalyticsHost},
@@ -29,36 +29,38 @@ func NewESQueryService(settings config.Settings, log *zerolog.Logger) *Aggregate
 		panic(err)
 	}
 
-	return &AggregateQueryService{es: esClient, log: log, elasticIndex: settings.ElasticSearchIndex}
+	fmt.Println(settings.ElasticSearchAnalyticsHost, settings.ElasticSearchAnalyticsUsername, settings.ElasticSearchAnalyticsPassword)
+
+	return &ElasticSearchQueryService{es: esClient, elasticIndex: settings.ElasticSearchIndex}
 }
 
-func (aqs *AggregateQueryService) executeESQuery(q interface{}) (string, error) {
+func (eqs *ElasticSearchQueryService) executeESQuery(q interface{}) (string, error) {
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(q); err != nil {
 		return "", err
 	}
 
-	res, err := aqs.es.Search(
-		aqs.es.Search.WithContext(context.Background()),
-		aqs.es.Search.WithIndex(aqs.elasticIndex),
-		aqs.es.Search.WithBody(&buf),
+	res, err := eqs.es.Search(
+		eqs.es.Search.WithContext(context.Background()),
+		eqs.es.Search.WithIndex(eqs.elasticIndex),
+		eqs.es.Search.WithBody(&buf),
 	)
 	if err != nil {
-		aqs.log.Err(err).Msg("Could not query Elasticsearch")
+		eqs.log.Err(err).Msg("Could not query Elasticsearch")
 		return "", err
 	}
 	defer res.Body.Close()
 
 	responseBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		aqs.log.Err(err).Msg("Could not parse Elasticsearch response body")
+		eqs.log.Err(err).Msg("Could not parse Elasticsearch response body")
 		return "", err
 	}
 	response := string(responseBytes)
 
 	if res.StatusCode != 200 {
-		aqs.log.Info().RawJSON("elasticsearchResponseBody", responseBytes).Msg("Error from Elastic.")
-		aqs.log.Info().RawJSON("elasticRequest", buf.Bytes()).Msg("request sent to elastics")
+		eqs.log.Info().RawJSON("elasticsearchResponseBody", responseBytes).Msg("Error from Elastic.")
+		eqs.log.Info().RawJSON("elasticRequest", buf.Bytes()).Msg("request sent to elastics")
 
 		err := fmt.Errorf("invalid status code when querying elastic: %d", res.StatusCode)
 		return response, err
@@ -67,7 +69,7 @@ func (aqs *AggregateQueryService) executeESQuery(q interface{}) (string, error) 
 	return response, nil
 }
 
-func FormatTripGeoQuery(deviceID, start, end string) QueryTrip {
+func (eqs *ElasticSearchQueryService) TripGeoQuery(deviceID, start, end string) (string, error) {
 
 	query := QueryTrip{}
 
@@ -89,7 +91,12 @@ func FormatTripGeoQuery(deviceID, start, end string) QueryTrip {
 	query.Query.Bool.Must = append(query.Query.Bool.Must, match)
 	query.Query.Bool.Filter = append(query.Query.Bool.Filter, date)
 
-	return query
+	response, err := eqs.executeESQuery(query)
+	if err != nil {
+		return "", err
+	}
+
+	return response, nil
 }
 
 type QueryTrip struct {
