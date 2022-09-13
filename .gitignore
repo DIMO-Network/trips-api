@@ -1,1 +1,5 @@
-settings.yaml
+# dont push data
+*.json
+postgres-data/
+.env
+/settings.yaml
