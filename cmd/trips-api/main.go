@@ -13,7 +13,6 @@ import (
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/DIMO-Network/trips-api/internal/database"
 	"github.com/DIMO-Network/trips-api/internal/kafka"
-	"github.com/DIMO-Network/trips-api/internal/services"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/golang-jwt/jwt/v4"
@@ -55,7 +54,7 @@ func main() {
 				command = command + " " + os.Args[3]
 			}
 		}
-		services.MigrateDatabase(logger, &settings, command, "trips_api")
+		MigrateDatabase(logger, &settings, command, "trips_api")
 	default:
 
 		tripQueryController := database.NewDatabaseConnection(settings, &logger)
@@ -104,7 +103,7 @@ func main() {
 			return c.SendString("Hello, World!")
 		})
 		go func() {
-			app.Listen(":8000")
+			app.Listen(":8080")
 		}()
 
 		sigChan := make(chan os.Signal, 1)
