@@ -39,7 +39,6 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed loading settings.")
 	}
-	logger.Info().Interface("settings", settings).Msg("Settings loaded.")
 
 	arg := ""
 	if len(os.Args) > 1 {
