@@ -118,9 +118,13 @@ func (p *TripDataQueryService) DeviceTripOngoing(c *fiber.Ctx) error {
 	return c.JSON(resp)
 }
 
+const userIDContextKey = "userID"
+
 func (p *TripDataQueryService) AllDeviceTrips(c *fiber.Ctx) error {
 	fmt.Println("all device trips start")
 	deviceID := c.Params("id")
+
+	c.Locals(userIDContextKey)
 
 	userID := getUserID(c)
 	fmt.Println("uesrID: ", userID, " deviceID: ", deviceID)

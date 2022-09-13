@@ -18,7 +18,6 @@ import (
 	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/golang-jwt/jwt/v4"
 	_ "github.com/lib/pq"
-	"github.com/lovoo/goka"
 	"github.com/rs/zerolog"
 
 	"github.com/gofiber/fiber/v2"
@@ -26,12 +25,12 @@ import (
 
 const userIDContextKey = "userID"
 
-var (
-	group     goka.Group  = "trips-api"
-	tripTopic goka.Stream = "topic.device.trip.event"
-)
+// var (
+// 	group     goka.Group  = "trips-api"
+// 	tripTopic goka.Stream = "topic.device.trip.event"
+// )
 
-var tripStatusCodec = &shared.JSONCodec[kafka.TripStatus]{}
+// var tripStatusCodec = &shared.JSONCodec[kafka.TripStatus]{}
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -94,11 +93,11 @@ func main() {
 		app := fiber.New()
 
 		app.Use(cors.New(cors.Config{AllowOrigins: "*"}))
-		app.Get("/ongoing/all", tripQueryController.AllOngoingTrips)
-		app.Get("/devices/all", tripQueryController.AllUsers)
+		// app.Get("/ongoing/all", tripQueryController.AllOngoingTrips)
+		// app.Get("/devices/all", tripQueryController.AllUsers)
 
 		deviceGroup := app.Group("/devices/:id", jwtAuth)
-		deviceGroup.Get("/ongoing", tripQueryController.DeviceTripOngoing)
+		// deviceGroup.Get("/ongoing", tripQueryController.DeviceTripOngoing)
 		deviceGroup.Get("/alltrips", tripQueryController.AllDeviceTrips)
 
 		app.Get("/", func(c *fiber.Ctx) error {
