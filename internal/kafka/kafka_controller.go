@@ -20,10 +20,10 @@ var (
 	tripTopic goka.Stream = "topic.device.trip.event"
 )
 
-type TripStatus struct {
-	DeviceID string
-	Start    time.Time
-	End      time.Time
+type TripEvent struct {
+	DeviceID string    `json:"deviceId"`
+	Start    time.Time `json:"start"`
+	End      time.Time `json:"end"`
 }
 
 type TripEventProcessor struct {
@@ -36,7 +36,7 @@ func NewTripEventProcessor(logger *zerolog.Logger, db *sql.DB) *TripEventProcess
 	return &TripEventProcessor{logger: logger, db: db, Done: make(chan bool)}
 }
 
-var tripStatusCodec = &shared.JSONCodec[TripStatus]{}
+var tripStatusCodec = &shared.JSONCodec[shared.CloudEvent[TripEvent]]{}
 
 func (p *TripEventProcessor) uniqueTripID(userID string, startTime time.Time) string {
 	start := startTime.Format("2006-01-02 15:04:05")
@@ -46,7 +46,7 @@ func (p *TripEventProcessor) uniqueTripID(userID string, startTime time.Time) st
 	return tid
 }
 
-func (p *TripEventProcessor) updateCompletedTrip(ctx context.Context, trp TripStatus) error {
+func (p *TripEventProcessor) updateCompletedTrip(ctx context.Context, trp TripEvent) error {
 
 	tm, err := models.FindFulltrip(ctx, p.db, p.uniqueTripID(trp.DeviceID, trp.Start))
 	if err != nil {
@@ -59,7 +59,7 @@ func (p *TripEventProcessor) updateCompletedTrip(ctx context.Context, trp TripSt
 	return err
 }
 
-func (p *TripEventProcessor) beginNewTrip(ctx context.Context, trp TripStatus) error {
+func (p *TripEventProcessor) beginNewTrip(ctx context.Context, trp TripEvent) error {
 	newTrip := models.Fulltrip{
 		TripID:    p.uniqueTripID(trp.DeviceID, trp.Start),
 		DeviceID:  null.StringFrom(trp.DeviceID),
@@ -69,17 +69,18 @@ func (p *TripEventProcessor) beginNewTrip(ctx context.Context, trp TripStatus) e
 }
 
 func (p *TripEventProcessor) listenForTrips(ctx goka.Context, msg any) {
-	ongoingTrip := msg.(*TripStatus)
+	event := msg.(*shared.CloudEvent[TripEvent])
+	ongoingTrip := event.Data
 
 	if !ongoingTrip.End.IsZero() {
-		err := p.updateCompletedTrip(ctx.Context(), *ongoingTrip)
+		err := p.updateCompletedTrip(ctx.Context(), ongoingTrip)
 		if err != nil {
 			p.logger.Err(err)
 		}
 		return
 	}
 
-	err := p.beginNewTrip(ctx.Context(), *ongoingTrip)
+	err := p.beginNewTrip(ctx.Context(), ongoingTrip)
 	if err != nil {
 		p.logger.Err(err)
 	}
