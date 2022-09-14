@@ -72,6 +72,8 @@ func (p *TripEventProcessor) listenForTrips(ctx goka.Context, msg any) {
 	event := msg.(*shared.CloudEvent[TripEvent])
 	ongoingTrip := event.Data
 
+	p.logger.Info().Str("userDeviceId", ctx.Key()).Interface("event", event.Data).Msg("Received trip event.")
+
 	if !ongoingTrip.End.IsZero() {
 		err := p.updateCompletedTrip(ctx.Context(), ongoingTrip)
 		if err != nil {
