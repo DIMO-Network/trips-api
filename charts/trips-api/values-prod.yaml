@@ -8,8 +8,6 @@ cronJob:
   schedule: 0 0 * * 0
 env:
   ENVIRONMENT: prod
-  DB_PORT: 5432
-  DB_NAME: trips_api
   KAFKA_BROKERS: kafka-prod-dimo-kafka-kafka-brokers:9092
   JWT_KEY_SET_URL: https://auth.dimo.zone/keys
   DEVICES_API_GRPC_ADDR: devices-api-prod:8086
