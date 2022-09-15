@@ -77,14 +77,14 @@ func (p *TripEventProcessor) listenForTrips(ctx goka.Context, msg any) {
 	if !ongoingTrip.End.IsZero() {
 		err := p.updateCompletedTrip(ctx.Context(), ongoingTrip)
 		if err != nil {
-			p.logger.Err(err)
+			p.logger.Err(err).Str("userDeviceId", ctx.Key()).Msg("Failed updating trip.")
 		}
 		return
 	}
 
 	err := p.beginNewTrip(ctx.Context(), ongoingTrip)
 	if err != nil {
-		p.logger.Err(err)
+		p.logger.Err(err).Str("userDeviceId", ctx.Key()).Msg("Failed creating trip.")
 	}
 
 }
