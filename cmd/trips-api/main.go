@@ -110,7 +110,9 @@ func main() {
 			return c.SendString("Hello, World!")
 		})
 		go func() {
-			app.Listen(":8080")
+			if err = app.Listen(":8080"); err != nil {
+				logger.Fatal().Err(err)
+			}
 		}()
 
 		sigChan := make(chan os.Signal, 1)
