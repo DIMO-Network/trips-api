@@ -60,6 +60,12 @@ func NewDatabaseConnection(settings config.Settings, logger *zerolog.Logger) Tri
 	return TripDataQueryService{Pg: db, devicesAPIGRPCAddr: settings.DevicesAPIGRPCAddr, log: logger, es: esClient, elasticIndex: settings.ElasticSearchIndex}
 }
 
+// AllOngoingTrips godoc
+// @Description ongoing segments across all devices
+// @Tags        segments
+// @Produce     json
+// @Success     200 {object} []string
+// @Router      /ongoing/all [get]
 func (p *TripDataQueryService) AllOngoingTrips(c *fiber.Ctx) error {
 
 	ongoingTrips := make([]string, 0)
@@ -76,6 +82,12 @@ func (p *TripDataQueryService) AllOngoingTrips(c *fiber.Ctx) error {
 	return c.JSON(ongoingTrips)
 }
 
+// AllUsers godoc
+// @Description all devics that have completed segments
+// @Tags        segments
+// @Produce     json
+// @Success     200 {object} []string
+// @Router      /devices/all [get]
 func (p *TripDataQueryService) AllUsers(c *fiber.Ctx) error {
 
 	ongoingTrips := make([]string, 0)
@@ -92,6 +104,13 @@ func (p *TripDataQueryService) AllUsers(c *fiber.Ctx) error {
 	return c.JSON(ongoingTrips)
 }
 
+// DeviceTripOngoing godoc
+// @Description segment details of ongoing event for a given device
+// @Tags        user-segments
+// @Produce     json
+// @Success     200 {object} geojson.FeatureCollection
+// @Security    BearerAuth
+// @Router      /devices/:id/ongoing [get]
 func (p *TripDataQueryService) DeviceTripOngoing(c *fiber.Ctx) error {
 	deviceID := c.Params("id")
 
@@ -120,6 +139,13 @@ func (p *TripDataQueryService) DeviceTripOngoing(c *fiber.Ctx) error {
 
 const userIDContextKey = "userID"
 
+// AllDeviceTrips godoc
+// @Description geojson of all segment details for a given device
+// @Tags        user-segments
+// @Produce     json
+// @Success     200 {object} geojson.FeatureCollection
+// @Security    BearerAuth
+// @Router      /devices/:id/alltrips [get]
 func (p *TripDataQueryService) AllDeviceTrips(c *fiber.Ctx) error {
 	fmt.Println("all device trips start")
 	deviceID := c.Params("id")
