@@ -1,0 +1,178 @@
+basePath: /
+definitions:
+  geojson.Feature:
+    properties:
+      bbox:
+        items:
+          type: number
+        type: array
+      crs:
+        additionalProperties: true
+        description: Coordinate Reference System Objects are not currently supported
+        type: object
+      geometry:
+        $ref: '#/definitions/geojson.Geometry'
+      id: {}
+      properties:
+        additionalProperties: true
+        type: object
+      type:
+        type: string
+    type: object
+  geojson.FeatureCollection:
+    properties:
+      bbox:
+        items:
+          type: number
+        type: array
+      crs:
+        additionalProperties: true
+        description: Coordinate Reference System Objects are not currently supported
+        type: object
+      features:
+        items:
+          $ref: '#/definitions/geojson.Feature'
+        type: array
+      type:
+        type: string
+    type: object
+  geojson.Geometry:
+    properties:
+      bbox:
+        items:
+          type: number
+        type: array
+      crs:
+        additionalProperties: true
+        description: Coordinate Reference System Objects are not currently supported
+        type: object
+      geometries:
+        items:
+          $ref: '#/definitions/geojson.Geometry'
+        type: array
+      lineString:
+        items:
+          items:
+            type: number
+          type: array
+        type: array
+      multiLineString:
+        items:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        type: array
+      multiPoint:
+        items:
+          items:
+            type: number
+          type: array
+        type: array
+      multiPolygon:
+        items:
+          items:
+            items:
+              items:
+                type: number
+              type: array
+            type: array
+          type: array
+        type: array
+      point:
+        items:
+          type: number
+        type: array
+      polygon:
+        items:
+          items:
+            items:
+              type: number
+            type: array
+          type: array
+        type: array
+      type:
+        $ref: '#/definitions/geojson.GeometryType'
+    type: object
+  geojson.GeometryType:
+    enum:
+    - Point
+    - MultiPoint
+    - LineString
+    - MultiLineString
+    - Polygon
+    - MultiPolygon
+    - GeometryCollection
+    type: string
+    x-enum-varnames:
+    - GeometryPoint
+    - GeometryMultiPoint
+    - GeometryLineString
+    - GeometryMultiLineString
+    - GeometryPolygon
+    - GeometryMultiPolygon
+    - GeometryCollection
+info:
+  contact: {}
+  description: segments
+  title: DIMO Segment API
+  version: "1.0"
+paths:
+  /devices/:id/alltrips:
+    get:
+      description: geojson of all segment details for a given device
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/geojson.FeatureCollection'
+      security:
+      - BearerAuth: []
+      tags:
+      - user-segments
+  /devices/:id/ongoing:
+    get:
+      description: segment details of ongoing event for a given device
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/geojson.FeatureCollection'
+      security:
+      - BearerAuth: []
+      tags:
+      - user-segments
+  /devices/all:
+    get:
+      description: all devics that have completed segments
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+      tags:
+      - segments
+  /ongoing/all:
+    get:
+      description: ongoing segments across all devices
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: string
+            type: array
+      tags:
+      - segments
+swagger: "2.0"

@@ -10,16 +10,17 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/shared"
+	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/DIMO-Network/trips-api/internal/database"
 	"github.com/DIMO-Network/trips-api/internal/kafka"
+	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	jwtware "github.com/gofiber/jwt/v3"
+	"github.com/gofiber/swagger"
 	"github.com/golang-jwt/jwt/v4"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
-
-	"github.com/gofiber/fiber/v2"
 )
 
 const userIDContextKey = "userID"
@@ -31,6 +32,13 @@ const userIDContextKey = "userID"
 
 // var tripStatusCodec = &shared.JSONCodec[kafka.TripStatus]{}
 
+// @title                      DIMO Segment API
+// @version                    1.0
+// @description segments
+
+// @BasePath /
+
+// @name Authorization
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	logger := zerolog.New(os.Stdout).With().Timestamp().Str("app", "trips-api").Logger()
@@ -89,7 +97,7 @@ func main() {
 		logger.Info().Interface("settings", settings).Msg("Settings")
 
 		app := fiber.New()
-
+		app.Get("/swagger/*", swagger.HandlerDefault)
 		app.Use(cors.New(cors.Config{AllowOrigins: "*"}))
 		// app.Get("/ongoing/all", tripQueryController.AllOngoingTrips)
 		// app.Get("/devices/all", tripQueryController.AllUsers)
@@ -102,7 +110,9 @@ func main() {
 			return c.SendString("Hello, World!")
 		})
 		go func() {
-			app.Listen(":8080")
+			if err = app.Listen(":8080"); err != nil {
+				logger.Fatal().Err(err)
+			}
 		}()
 
 		sigChan := make(chan os.Signal, 1)
