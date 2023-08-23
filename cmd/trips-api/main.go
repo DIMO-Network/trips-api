@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/shared"
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/config"
@@ -18,6 +19,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const userIDContextKey = "userID"
@@ -57,6 +60,14 @@ func main() {
 		MigrateDatabase(logger, &settings, command, "trips_api")
 	default:
 
+		conn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to establish devices grpc connection.")
+		}
+		defer conn.Close()
+
+		deviceClient := pb_devices.NewUserDeviceServiceClient(conn)
+
 		esStore, err := es_store.New(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to establish connection to elasticsearch.")
@@ -72,7 +83,7 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to start Bunldr uploader")
 		}
 
-		consumer, err := consumer.New(esStore, uploader, pgStore, &settings, &logger)
+		consumer, err := consumer.New(esStore, uploader, pgStore, deviceClient, &settings, &logger)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create consumer.")
 		}
