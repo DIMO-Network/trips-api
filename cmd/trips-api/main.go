@@ -25,11 +25,6 @@ import (
 
 const userIDContextKey = "userID"
 
-// var (
-// 	group     goka.Group  = "trips-api"
-// 	tripTopic goka.Stream = "topic.device.trip.event"
-// )
-
 // var tripStatusCodec = &shared.JSONCodec[kafka.TripStatus]{}
 
 // @title                      DIMO Segment API
@@ -106,11 +101,15 @@ func main() {
 		// deviceGroup.Get("/ongoing", tripQueryController.DeviceTripOngoing)
 		deviceGroup.Get("/alltrips", tripQueryController.AllDeviceTrips)
 
-		app.Get("/", func(c *fiber.Ctx) error {
-			return c.SendString("Hello, World!")
+		app.Get("/health", func(c *fiber.Ctx) error {
+			return c.JSON(map[string]interface{}{
+				"data": "Server is up and running",
+			})
 		})
+
 		go func() {
-			if err = app.Listen(":8080"); err != nil {
+			logger.Info().Msgf("Starting API server on port %s.", settings.Port)
+			if err := app.Listen(fmt.Sprintf(":%s", settings.Port)); err != nil {
 				logger.Fatal().Err(err)
 			}
 		}()
