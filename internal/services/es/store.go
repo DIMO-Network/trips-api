@@ -1,4 +1,4 @@
-package es_controller
+package es
 
 import (
 	"bytes"
@@ -15,12 +15,12 @@ import (
 
 const elasticSearchMaxSize = 10000
 
-type Client struct {
+type Store struct {
 	Client *elasticsearch.Client
 	Index  string
 }
 
-func New(settings *config.Settings) (*Client, error) {
+func New(settings *config.Settings) (*Store, error) {
 	es, err := elasticsearch.NewClient(elasticsearch.Config{
 		Addresses: []string{settings.ElasticHost},
 		Username:  settings.ElasticUsername,
@@ -29,10 +29,10 @@ func New(settings *config.Settings) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Client{Client: es, Index: settings.ElasticIndex}, nil
+	return &Store{Client: es, Index: settings.ElasticIndex}, nil
 }
 
-func (c *Client) FetchData(deviceID, start, end string) ([]byte, error) {
+func (s *Store) FetchData(deviceID, start, end string) ([]byte, error) {
 	var searchAfter int64
 	query := QueryTrip{
 		Sort: []map[string]string{
@@ -61,7 +61,7 @@ func (c *Client) FetchData(deviceID, start, end string) ([]byte, error) {
 		Size: elasticSearchMaxSize,
 	}
 
-	response, err := c.executeESQuery(query)
+	response, err := s.executeESQuery(query)
 	if err != nil {
 		return []byte{}, err
 	}
@@ -71,7 +71,7 @@ func (c *Client) FetchData(deviceID, start, end string) ([]byte, error) {
 
 	for searchAfter > 0 {
 		query.SearchAfter = []int64{searchAfter}
-		resp, err := c.executeESQuery(query)
+		resp, err := s.executeESQuery(query)
 		if err != nil {
 			return []byte{}, err
 		}
@@ -90,16 +90,16 @@ func (c *Client) FetchData(deviceID, start, end string) ([]byte, error) {
 	return response, nil
 }
 
-func (c *Client) executeESQuery(query any) ([]byte, error) {
+func (s *Store) executeESQuery(query any) ([]byte, error) {
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(query); err != nil {
 		return []byte{}, err
 	}
 
-	res, err := c.Client.Search(
-		c.Client.Search.WithContext(context.Background()),
-		c.Client.Search.WithIndex(c.Index),
-		c.Client.Search.WithBody(&buf),
+	res, err := s.Client.Search(
+		s.Client.Search.WithContext(context.Background()),
+		s.Client.Search.WithIndex(s.Index),
+		s.Client.Search.WithBody(&buf),
 	)
 	if err != nil {
 		// c.logger.Err(err).Msg("Could not query Elasticsearch")

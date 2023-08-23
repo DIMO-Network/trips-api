@@ -8,7 +8,7 @@ import (
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/kafka"
 	"github.com/DIMO-Network/trips-api/internal/config"
-	"github.com/DIMO-Network/trips-api/internal/services/es_controller"
+	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	"github.com/DIMO-Network/trips-api/internal/services/uploader"
 	"github.com/rs/zerolog"
 )
@@ -16,7 +16,7 @@ import (
 type CompletedSegmentConsumer struct {
 	config kafka.Config
 	logger *zerolog.Logger
-	es     *es_controller.Client
+	es     *es_store.Store
 	*uploader.Uploader
 }
 
@@ -26,7 +26,7 @@ type SegmentEvent struct {
 	DeviceID string    `json:"deviceID"`
 }
 
-func New(es *es_controller.Client, uploader *uploader.Uploader, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
+func New(es *es_store.Store, uploader *uploader.Uploader, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
 	kc := kafka.Config{
 		Brokers: strings.Split(settings.KafkaBrokers, ","),
 		Topic:   settings.TripEventTopic,
