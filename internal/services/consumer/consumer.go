@@ -9,6 +9,7 @@ import (
 	"github.com/DIMO-Network/shared/kafka"
 	"github.com/DIMO-Network/trips-api/internal/config"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
+	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/internal/services/uploader"
 	"github.com/rs/zerolog"
 )
@@ -17,6 +18,7 @@ type CompletedSegmentConsumer struct {
 	config kafka.Config
 	logger *zerolog.Logger
 	es     *es_store.Store
+	pg     *pg_store.Store
 	*uploader.Uploader
 }
 
@@ -26,14 +28,14 @@ type SegmentEvent struct {
 	DeviceID string    `json:"deviceID"`
 }
 
-func New(es *es_store.Store, uploader *uploader.Uploader, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
+func New(es *es_store.Store, uploader *uploader.Uploader, pg *pg_store.Store, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
 	kc := kafka.Config{
 		Brokers: strings.Split(settings.KafkaBrokers, ","),
 		Topic:   settings.TripEventTopic,
 		Group:   "segmenter",
 	}
 
-	return &CompletedSegmentConsumer{kc, logger, es, uploader}, nil
+	return &CompletedSegmentConsumer{kc, logger, es, pg, uploader}, nil
 }
 
 func (c *CompletedSegmentConsumer) Start(ctx context.Context) {
@@ -49,7 +51,7 @@ func (c *CompletedSegmentConsumer) ingest(_ context.Context, event *shared.Cloud
 		return err
 	}
 
-	_, err = c.PrepareData(response, event.Data.Start.Format(time.RFC3339), event.Data.End.Format(time.RFC3339))
+	dataItem, encryptionKey, err := c.PrepareData(response, event.Data.DeviceID, event.Data.Start.Format(time.RFC3339), event.Data.End.Format(time.RFC3339))
 	if err != nil {
 		return err
 	}

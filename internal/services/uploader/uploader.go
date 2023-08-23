@@ -6,9 +6,11 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/DIMO-Network/trips-api/internal/config"
+	"github.com/warp-contracts/syncer/src/utils/arweave"
 	"github.com/warp-contracts/syncer/src/utils/bundlr"
 )
 
@@ -36,43 +38,45 @@ func New(settings *config.Settings) (*Uploader, error) {
 }
 
 // PrepareData prepares data for uploading to bundlr by compressing and encrypting input.
-func (u *Uploader) PrepareData(data []byte, start, end string) ([]byte, error) {
-	compressedData, err := u.compress(data, start, end)
+func (u *Uploader) PrepareData(data []byte, deviceID, startTime, endTime string) (bundlr.BundleItem, string, error) {
+	compressedData, err := u.compress(data, startTime, endTime)
 	if err != nil {
-		return []byte{}, err
+		return bundlr.BundleItem{}, "", err
 	}
 
 	// generating random 32 byte key for AES-256
 	// this will change with PRO-1867 encryption keys created for minted devices
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
-		return []byte{}, err
+		return bundlr.BundleItem{}, "", err
+	}
+	encryptionKey := hex.EncodeToString(bytes)
+
+	encryptedData, err := u.encrypt(compressedData, bytes)
+	if err != nil {
+		return bundlr.BundleItem{}, encryptionKey, err
 	}
 
-	return u.encrypt(compressedData, bytes)
+	dataItem := bundlr.BundleItem{
+		Data: arweave.Base64String(encryptedData),
+		// in the future-- allow tags to be passed in
+		// ie, someone could name their trip
+		Tags: bundlr.Tags{
+			bundlr.Tag{Name: "Content-Type", Value: "text"},
+			bundlr.Tag{Name: "Trip-Type", Value: "segment"},
+			bundlr.Tag{Name: "Device-ID", Value: deviceID},
+			bundlr.Tag{Name: "Start-Time", Value: startTime},
+			bundlr.Tag{Name: "End-Time", Value: endTime},
+		},
+	}
+
+	err = dataItem.Sign(u.Signer)
+	return dataItem, encryptionKey, err
 }
 
-func (u *Uploader) Upload(data []byte, deviceID, startTime, endTime string) (string, error) {
+func (u *Uploader) Upload(dataItem bundlr.BundleItem) (string, error) {
 	// TO DO
 	return "", nil
-
-	// dataItem := bundlr.BundleItem{
-	// 	Data: arweave.Base64String(data),
-	// 	// in the future-- allow tags to be passed in
-	// 	// ie, someone could name their trip
-	// 	Tags: bundlr.Tags{
-	// 		bundlr.Tag{Name: "Content-Type", Value: "text"},
-	// 		bundlr.Tag{Name: "Trip-Type", Value: "segment"},
-	// 		bundlr.Tag{Name: "Device-ID", Value: deviceID},
-	// 		bundlr.Tag{Name: "Start-Time", Value: startTime},
-	// 		bundlr.Tag{Name: "End-Time", Value: endTime},
-	// 	},
-	// }
-
-	// err := dataItem.Sign(u.Signer)
-	// if err != nil {
-	// 	return "", err
-	// }
 
 	// reader, err := dataItem.Reader()
 	// if err != nil {

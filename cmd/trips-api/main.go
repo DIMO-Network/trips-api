@@ -12,7 +12,8 @@ import (
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/DIMO-Network/trips-api/internal/services/consumer"
-	"github.com/DIMO-Network/trips-api/internal/services/es_controller"
+	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
+	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/internal/services/uploader"
 	"github.com/gofiber/fiber/v2"
 	_ "github.com/lib/pq"
@@ -56,9 +57,14 @@ func main() {
 		MigrateDatabase(logger, &settings, command, "trips_api")
 	default:
 
-		esController, err := es_controller.New(&settings)
+		esStore, err := es_store.New(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to establish connection to elasticsearch.")
+		}
+
+		pgStore, err := pg_store.New(&settings)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to establish connection to postgres.")
 		}
 
 		uploader, err := uploader.New(&settings)
@@ -66,7 +72,7 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to start Bunldr uploader")
 		}
 
-		consumer, err := consumer.New(esController, uploader, &settings, &logger)
+		consumer, err := consumer.New(esStore, uploader, pgStore, &settings, &logger)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create consumer.")
 		}
