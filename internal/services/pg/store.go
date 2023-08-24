@@ -56,9 +56,9 @@ func (s *Store) StoreSegmentMetadata(ctx context.Context, vehicleTokenId uint64,
 	trp := models.Trip{
 		VehicleTokenID: types.NewDecimal(decimal.New(int64(vehicleTokenId)+startTime.Unix(), 0)),
 		Start:          startTime,
-		StartHex:       int(startHex),
+		StartHex:       int64(startHex),
 		End:            endTime,
-		EndHex:         int(endHex),
+		EndHex:         int64(endHex),
 		BunldrID:       bundlrID,
 	}
 
