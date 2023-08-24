@@ -69,7 +69,12 @@ func (c *CompletedSegmentConsumer) ingest(ctx context.Context, event *shared.Clo
 	if err != nil {
 		return err
 	}
-	// upload
 
+	err = c.Upload(dataItem)
+	if err != nil {
+		return err
+	}
+
+	c.logger.Info().Msgf("https://devnet.bundlr.network/%s", dataItem.Id.Base64())
 	return nil
 }

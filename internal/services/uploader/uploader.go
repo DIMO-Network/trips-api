@@ -7,7 +7,13 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"net/http"
+	"strings"
+	"time"
 
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/warp-contracts/syncer/src/utils/arweave"
@@ -20,10 +26,10 @@ type Uploader struct {
 	contentType string
 }
 
-// type uploadResp struct {
-// 	ID        string `json:"id,omitempty"`
-// 	Timestamp string `json:"timestamp,omitempty"`
-// }
+type bundlrConfirmation struct {
+	ID        string    `json:"id,omitempty"`
+	Timestamp time.Time `json:"timestamp,omitempty"`
+}
 
 func New(settings *config.Settings) (*Uploader, error) {
 	signer, err := bundlr.NewEthereumSigner("0x" + settings.EthereumSignerPrivateKey)
@@ -61,9 +67,8 @@ func (u *Uploader) PrepareData(data []byte, deviceID, startTime, endTime string)
 	dataItem := bundlr.BundleItem{
 		Data: arweave.Base64String(encryptedData),
 		// in the future-- allow tags to be passed in
-		// ie, someone could name their trip
+		// ie, someone could name their trip?
 		Tags: bundlr.Tags{
-			bundlr.Tag{Name: "Content-Type", Value: "text"},
 			bundlr.Tag{Name: "Trip-Type", Value: "segment"},
 			bundlr.Tag{Name: "Device-ID", Value: deviceID},
 			bundlr.Tag{Name: "Start-Time", Value: startTime},
@@ -75,44 +80,35 @@ func (u *Uploader) PrepareData(data []byte, deviceID, startTime, endTime string)
 	return dataItem, encryptionKey, err
 }
 
-func (u *Uploader) Upload(dataItem bundlr.BundleItem) (string, error) {
-	// TO DO
-	return "", nil
+func (u *Uploader) Upload(dataItem bundlr.BundleItem) error {
+	reader, err := dataItem.Reader()
+	if err != nil {
+		return err
+	}
 
-	// reader, err := dataItem.Reader()
-	// if err != nil {
-	// 	return "", err
-	// }
+	body, err := io.ReadAll(reader)
+	if err != nil {
+		return err
+	}
 
-	// body, err := io.ReadAll(reader)
-	// if err != nil {
-	// 	return "", err
-	// }
+	postBody := bytes.NewBuffer(body)
+	resp, err := http.Post(u.url, u.contentType, postBody)
+	if err != nil {
+		return err
+	}
 
-	// responseBody := bytes.NewBuffer(body)
-	// resp, err := http.Post(u.url, u.contentType, responseBody)
-	// if err != nil {
-	// 	return "", err
-	// }
+	defer resp.Body.Close()
 
-	// defer resp.Body.Close()
+	body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
 
-	// // if resp.Header.Get("Content-Type") == "text/plain; charset=utf-8" {
-	// // 	// the tx was already uploaded
-	// // }
+	if strings.Contains(resp.Header.Get("Content-Type"), "text/plain") {
+		return errors.New(string(body))
+	}
 
-	// var r uploadResp
-	// body, err = ioutil.ReadAll(resp.Body)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// err = json.Unmarshal(body, &r)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// return string(body), nil
+	return nil
 }
 
 func (u *Uploader) compress(data []byte, start, end string) ([]byte, error) {
