@@ -22,6 +22,7 @@ func TestPrepareData(t *testing.T) {
 	end := "2023-08-17"
 
 	uploader, err := New(&config.Settings{})
+	assert.NoError(err)
 
 	compressedData, err := uploader.compress(dataB, start, end)
 	assert.NoError(err)
