@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/signal"
@@ -42,8 +41,7 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed loading settings.")
 	}
-	b, _ := json.MarshalIndent(settings, "", " ")
-	fmt.Println(string(b))
+
 	arg := ""
 	if len(os.Args) > 1 {
 		arg = os.Args[1]

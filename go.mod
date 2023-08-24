@@ -6,7 +6,6 @@ require (
 	github.com/ericlagergren/decimal v0.0.0-20211103172832-aca2edc11f73
 	github.com/friendsofgo/errors v0.9.2
 	github.com/gofiber/fiber/v2 v2.47.0
-	github.com/segmentio/ksuid v1.0.4
 	github.com/stretchr/testify v1.8.4
 	github.com/swaggo/swag v1.16.1
 	github.com/tidwall/sjson v1.2.5
@@ -129,7 +128,9 @@ require (
 	github.com/pressly/goose v2.7.0+incompatible
 	github.com/rs/zerolog v1.29.1
 	github.com/tidwall/gjson v1.14.4
-	github.com/volatiletech/null/v8 v8.1.2
+	github.com/volatiletech/null/v8 v8.1.2 // indirect
 	github.com/volatiletech/sqlboiler/v4 v4.14.2
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/ericlagergren/decimal => github.com/ericlagergren/decimal v0.0.0-20181231230500-73749d4874d5
