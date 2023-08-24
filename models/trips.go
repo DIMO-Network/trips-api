@@ -27,8 +27,8 @@ type Trip struct {
 	VehicleTokenID types.Decimal     `boil:"vehicle_token_id" json:"vehicle_token_id" toml:"vehicle_token_id" yaml:"vehicle_token_id"`
 	Start          time.Time         `boil:"start" json:"start" toml:"start" yaml:"start"`
 	End            time.Time         `boil:"end" json:"end" toml:"end" yaml:"end"`
-	StartHex       int               `boil:"start_hex" json:"start_hex" toml:"start_hex" yaml:"start_hex"`
-	EndHex         int               `boil:"end_hex" json:"end_hex" toml:"end_hex" yaml:"end_hex"`
+	StartHex       int64             `boil:"start_hex" json:"start_hex" toml:"start_hex" yaml:"start_hex"`
+	EndHex         int64             `boil:"end_hex" json:"end_hex" toml:"end_hex" yaml:"end_hex"`
 	BunldrID       string            `boil:"bunldr_id" json:"bunldr_id" toml:"bunldr_id" yaml:"bunldr_id"`
 	TripTokenID    types.NullDecimal `boil:"trip_token_id" json:"trip_token_id,omitempty" toml:"trip_token_id" yaml:"trip_token_id,omitempty"`
 
@@ -116,22 +116,22 @@ func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
-type whereHelperint struct{ field string }
+type whereHelperint64 struct{ field string }
 
-func (w whereHelperint) EQ(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperint) NEQ(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperint) LT(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperint) LTE(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperint) GT(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperint) GTE(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-func (w whereHelperint) IN(slice []int) qm.QueryMod {
+func (w whereHelperint64) EQ(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperint64) NEQ(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperint64) LT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperint64) LTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperint64) GT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperint64) GTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperint64) IN(slice []int64) qm.QueryMod {
 	values := make([]interface{}, 0, len(slice))
 	for _, value := range slice {
 		values = append(values, value)
 	}
 	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
 }
-func (w whereHelperint) NIN(slice []int) qm.QueryMod {
+func (w whereHelperint64) NIN(slice []int64) qm.QueryMod {
 	values := make([]interface{}, 0, len(slice))
 	for _, value := range slice {
 		values = append(values, value)
@@ -192,16 +192,16 @@ var TripWhere = struct {
 	VehicleTokenID whereHelpertypes_Decimal
 	Start          whereHelpertime_Time
 	End            whereHelpertime_Time
-	StartHex       whereHelperint
-	EndHex         whereHelperint
+	StartHex       whereHelperint64
+	EndHex         whereHelperint64
 	BunldrID       whereHelperstring
 	TripTokenID    whereHelpertypes_NullDecimal
 }{
 	VehicleTokenID: whereHelpertypes_Decimal{field: "\"trips_api\".\"trips\".\"vehicle_token_id\""},
 	Start:          whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"start\""},
 	End:            whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"end\""},
-	StartHex:       whereHelperint{field: "\"trips_api\".\"trips\".\"start_hex\""},
-	EndHex:         whereHelperint{field: "\"trips_api\".\"trips\".\"end_hex\""},
+	StartHex:       whereHelperint64{field: "\"trips_api\".\"trips\".\"start_hex\""},
+	EndHex:         whereHelperint64{field: "\"trips_api\".\"trips\".\"end_hex\""},
 	BunldrID:       whereHelperstring{field: "\"trips_api\".\"trips\".\"bunldr_id\""},
 	TripTokenID:    whereHelpertypes_NullDecimal{field: "\"trips_api\".\"trips\".\"trip_token_id\""},
 }

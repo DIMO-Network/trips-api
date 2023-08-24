@@ -6,8 +6,7 @@ DROP TABLE fulltrips;
 
 CREATE TABLE trips 
 (
-    vehicle_token_id numeric(78, 0) NOT NULL
-    CONSTRAINT vehicle_token_id_key UNIQUE, 
+    vehicle_token_id numeric(78, 0) NOT NULL,
 
     "start" timestamptz NOT NULL,
 
