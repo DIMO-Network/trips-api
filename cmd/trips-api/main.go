@@ -20,7 +20,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-const userIDContextKey = "userID"
+// const userIDContextKey = "userID"
 
 // var tripStatusCodec = &shared.JSONCodec[kafka.TripStatus]{}
 
@@ -32,7 +32,7 @@ const userIDContextKey = "userID"
 
 // @name Authorization
 func main() {
-	ctx, _ := context.WithCancel(context.Background())
+	ctx := context.Background()
 	logger := zerolog.New(os.Stdout).With().Timestamp().Str("app", "trips-api").Logger()
 
 	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")

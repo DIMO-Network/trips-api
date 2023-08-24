@@ -51,7 +51,7 @@ func (c *CompletedSegmentConsumer) ingest(_ context.Context, event *shared.Cloud
 		return err
 	}
 
-	dataItem, encryptionKey, err := c.PrepareData(response, event.Data.DeviceID, event.Data.Start.Format(time.RFC3339), event.Data.End.Format(time.RFC3339))
+	_, _, err = c.PrepareData(response, event.Data.DeviceID, event.Data.Start.Format(time.RFC3339), event.Data.End.Format(time.RFC3339))
 	if err != nil {
 		return err
 	}

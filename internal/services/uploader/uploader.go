@@ -19,10 +19,11 @@ type Uploader struct {
 	url         string
 	contentType string
 }
-type uploadResp struct {
-	ID        string `json:"id,omitempty"`
-	Timestamp string `json:"timestamp,omitempty"`
-}
+
+// type uploadResp struct {
+// 	ID        string `json:"id,omitempty"`
+// 	Timestamp string `json:"timestamp,omitempty"`
+// }
 
 func New(settings *config.Settings) (*Uploader, error) {
 	signer, err := bundlr.NewEthereumSigner("0x" + settings.EthereumSignerPrivateKey)
