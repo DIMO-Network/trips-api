@@ -1,4 +1,4 @@
-package uploader
+package bundlr
 
 import (
 	"crypto/aes"
@@ -28,7 +28,6 @@ func TestPrepareData(t *testing.T) {
 	assert.NoError(err)
 
 	// generating random 32 byte key for AES-256
-	// this will change with PRO-1867 encryption keys created for minted
 	key := make([]byte, 32)
 	_, err = rand.Read(key)
 	assert.NoError(err)

@@ -11,10 +11,10 @@ import (
 	"github.com/DIMO-Network/shared"
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/config"
+	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	"github.com/DIMO-Network/trips-api/internal/services/consumer"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
-	"github.com/DIMO-Network/trips-api/internal/services/uploader"
 	"github.com/gofiber/fiber/v2"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
@@ -76,12 +76,12 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to establish connection to postgres.")
 		}
 
-		uploader, err := uploader.New(&settings)
+		bundlrClient, err := bundlr.New(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to start Bunldr uploader")
 		}
 
-		consumer, err := consumer.New(esStore, uploader, pgStore, deviceClient, &settings, &logger)
+		consumer, err := consumer.New(esStore, bundlrClient, pgStore, deviceClient, &settings, &logger)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to create consumer.")
 		}

@@ -102,14 +102,12 @@ func (s *Store) executeESQuery(query any) ([]byte, error) {
 		s.Client.Search.WithBody(&buf),
 	)
 	if err != nil {
-		// c.logger.Err(err).Msg("Could not query Elasticsearch")
 		return []byte{}, err
 	}
 	defer res.Body.Close()
 
 	responseBytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		// c.logger.Err(err).Msg("Could not parse Elasticsearch response body")
 		return responseBytes, err
 	}
 
