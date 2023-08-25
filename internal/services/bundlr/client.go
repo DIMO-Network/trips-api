@@ -18,7 +18,6 @@ import (
 
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/DIMO-Network/trips-api/models"
-	"github.com/volatiletech/sqlboiler/v4/types"
 	"github.com/warp-contracts/syncer/src/utils/arweave"
 	"github.com/warp-contracts/syncer/src/utils/bundlr"
 )
@@ -52,7 +51,6 @@ func (c *Client) PrepareData(data []byte, deviceID, startTime, endTime string) (
 	}
 
 	// generating random 32 byte key for AES-256
-	// this will change with PRO-1867 encryption keys created for minted devices
 	encryptionKey := make([]byte, 32)
 	if _, err := rand.Read(encryptionKey); err != nil {
 		return bundlr.BundleItem{}, []byte{}, err
@@ -91,7 +89,7 @@ func (c *Client) Upload(dataItem bundlr.BundleItem) error {
 	}
 
 	postBody := bytes.NewBuffer(body)
-	fmt.Println("Uploading to this url: ", c.url+"tx/"+c.currency)
+
 	resp, err := http.Post(c.url+"tx/"+c.currency, c.contentType, postBody)
 	if err != nil {
 		return err
@@ -111,9 +109,9 @@ func (c *Client) Upload(dataItem bundlr.BundleItem) error {
 	return nil
 }
 
-func (c *Client) Download(ctx context.Context, tripTokenID types.NullDecimal, db *sql.DB) ([]string, error) {
+func (c *Client) Download(ctx context.Context, bundlrID string, db *sql.DB) ([]string, error) {
 
-	segment, err := models.Trips(models.TripWhere.TripTokenID.EQ(tripTokenID)).One(ctx, db)
+	segment, err := models.Trips(models.TripWhere.BunldrID.EQ(bundlrID)).One(ctx, db)
 	if err != nil {
 		return []string{}, err
 	}
