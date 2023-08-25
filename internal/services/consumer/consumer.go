@@ -8,9 +8,9 @@ import (
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/kafka"
 	"github.com/DIMO-Network/trips-api/internal/config"
+	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
-	"github.com/DIMO-Network/trips-api/internal/services/uploader"
 	"github.com/rs/zerolog"
 )
 
@@ -19,7 +19,7 @@ type CompletedSegmentConsumer struct {
 	logger *zerolog.Logger
 	es     *es_store.Store
 	pg     *pg_store.Store
-	*uploader.Uploader
+	*bundlr.Client
 }
 
 type SegmentEvent struct {
@@ -28,14 +28,14 @@ type SegmentEvent struct {
 	DeviceID string    `json:"deviceID"`
 }
 
-func New(es *es_store.Store, uploader *uploader.Uploader, pg *pg_store.Store, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
+func New(es *es_store.Store, bundlrClient *bundlr.Client, pg *pg_store.Store, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
 	kc := kafka.Config{
 		Brokers: strings.Split(settings.KafkaBrokers, ","),
 		Topic:   settings.TripEventTopic,
 		Group:   "segmenter",
 	}
 
-	return &CompletedSegmentConsumer{kc, logger, es, pg, uploader}, nil
+	return &CompletedSegmentConsumer{kc, logger, es, pg, bundlrClient}, nil
 }
 
 func (c *CompletedSegmentConsumer) Start(ctx context.Context) {

@@ -1,4 +1,4 @@
-package uploader
+package bundlr
 
 import (
 	"archive/zip"
@@ -14,24 +14,19 @@ import (
 	"github.com/warp-contracts/syncer/src/utils/bundlr"
 )
 
-type Uploader struct {
+type Client struct {
 	Signer      *bundlr.EthereumSigner
 	url         string
 	contentType string
 }
 
-// type uploadResp struct {
-// 	ID        string `json:"id,omitempty"`
-// 	Timestamp string `json:"timestamp,omitempty"`
-// }
-
-func New(settings *config.Settings) (*Uploader, error) {
+func New(settings *config.Settings) (*Client, error) {
 	signer, err := bundlr.NewEthereumSigner("0x" + settings.EthereumSignerPrivateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Uploader{
+	return &Client{
 		Signer:      signer,
 		url:         settings.BundlrNetwork,
 		contentType: "application/octet-stream",
@@ -39,31 +34,27 @@ func New(settings *config.Settings) (*Uploader, error) {
 }
 
 // PrepareData prepares data for uploading to bundlr by compressing and encrypting input.
-func (u *Uploader) PrepareData(data []byte, deviceID, startTime, endTime string) (bundlr.BundleItem, string, error) {
-	compressedData, err := u.compress(data, startTime, endTime)
+func (c *Client) PrepareData(data []byte, deviceID, startTime, endTime string) (bundlr.BundleItem, string, error) {
+	compressedData, err := c.compress(data, startTime, endTime)
 	if err != nil {
 		return bundlr.BundleItem{}, "", err
 	}
 
 	// generating random 32 byte key for AES-256
-	// this will change with PRO-1867 encryption keys created for minted devices
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
 		return bundlr.BundleItem{}, "", err
 	}
 	encryptionKey := hex.EncodeToString(bytes)
 
-	encryptedData, err := u.encrypt(compressedData, bytes)
+	encryptedData, err := c.encrypt(compressedData, bytes)
 	if err != nil {
 		return bundlr.BundleItem{}, encryptionKey, err
 	}
 
 	dataItem := bundlr.BundleItem{
 		Data: arweave.Base64String(encryptedData),
-		// in the future-- allow tags to be passed in
-		// ie, someone could name their trip
 		Tags: bundlr.Tags{
-			bundlr.Tag{Name: "Content-Type", Value: "text"},
 			bundlr.Tag{Name: "Trip-Type", Value: "segment"},
 			bundlr.Tag{Name: "Device-ID", Value: deviceID},
 			bundlr.Tag{Name: "Start-Time", Value: startTime},
@@ -71,51 +62,16 @@ func (u *Uploader) PrepareData(data []byte, deviceID, startTime, endTime string)
 		},
 	}
 
-	err = dataItem.Sign(u.Signer)
+	err = dataItem.Sign(c.Signer)
 	return dataItem, encryptionKey, err
 }
 
-func (u *Uploader) Upload(dataItem bundlr.BundleItem) (string, error) {
+func (c *Client) Upload(dataItem bundlr.BundleItem) (string, error) {
 	// TO DO
 	return "", nil
-
-	// reader, err := dataItem.Reader()
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// body, err := io.ReadAll(reader)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// responseBody := bytes.NewBuffer(body)
-	// resp, err := http.Post(u.url, u.contentType, responseBody)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// defer resp.Body.Close()
-
-	// // if resp.Header.Get("Content-Type") == "text/plain; charset=utf-8" {
-	// // 	// the tx was already uploaded
-	// // }
-
-	// var r uploadResp
-	// body, err = ioutil.ReadAll(resp.Body)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// err = json.Unmarshal(body, &r)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// return string(body), nil
 }
 
-func (u *Uploader) compress(data []byte, start, end string) ([]byte, error) {
+func (c *Client) compress(data []byte, start, end string) ([]byte, error) {
 	b := new(bytes.Buffer)
 	zw := zip.NewWriter(b)
 
@@ -137,7 +93,7 @@ func (u *Uploader) compress(data []byte, start, end string) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func (u *Uploader) encrypt(data, key []byte) ([]byte, error) {
+func (c *Client) encrypt(data, key []byte) ([]byte, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return []byte{}, err
