@@ -41,7 +41,7 @@ func New(settings *config.Settings) (*Store, error) {
 	}, nil
 }
 
-func (s *Store) StoreSegmentMetadata(ctx context.Context, vehicleTokenId uint64, encryptionKey string, response []byte, bundlrID string) error {
+func (s *Store) StoreSegmentMetadata(ctx context.Context, vehicleTokenId uint64, encryptionKey []byte, response []byte, bundlrID string) error {
 	n := gjson.GetBytes(response, "hits.hits.#").Int()
 	startLat := gjson.GetBytes(response, "hits.hits.0._source.data.latitude").Float()
 	startLon := gjson.GetBytes(response, "hits.hits.0._source.data.longitude").Float()

@@ -30,14 +30,14 @@ type SegmentEvent struct {
 	DeviceID string    `json:"deviceID"`
 }
 
-func New(es *es_store.Store, uploader *bundlr.Client, pg *pg_store.Store, grpcDevices pb_devices.UserDeviceServiceClient, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
+func New(es *es_store.Store, bundlrClient *bundlr.Client, pg *pg_store.Store, grpcDevices pb_devices.UserDeviceServiceClient, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
 	kc := kafka.Config{
 		Brokers: strings.Split(settings.KafkaBrokers, ","),
 		Topic:   settings.TripEventTopic,
 		Group:   "segmenter",
 	}
 
-	return &CompletedSegmentConsumer{kc, logger, es, pg, grpcDevices, uploader}, nil
+	return &CompletedSegmentConsumer{kc, logger, es, pg, grpcDevices, bundlrClient}, nil
 }
 
 func (c *CompletedSegmentConsumer) Start(ctx context.Context) {
