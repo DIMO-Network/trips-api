@@ -54,7 +54,7 @@ func (s *Store) StoreSegmentMetadata(ctx context.Context, vehicleTokenId uint64,
 	endHex := h3.FromGeo(h3.GeoCoord{Latitude: endLat, Longitude: endLon}, 6)
 
 	trp := models.Trip{
-		VehicleTokenID: types.NewDecimal(decimal.New(int64(vehicleTokenId)+startTime.Unix(), 0)),
+		VehicleTokenID: types.NewDecimal(decimal.New(int64(vehicleTokenId), 0)),
 		Start:          startTime,
 		StartHex:       int64(startHex),
 		End:            endTime,
