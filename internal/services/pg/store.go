@@ -16,7 +16,7 @@ import (
 
 // Store connected to postgres db containing trip information and validates user
 type Store struct {
-	db                 *sql.DB
+	Db                 *sql.DB
 	DevicesAPIGRPCAddr string
 }
 
@@ -36,7 +36,7 @@ func New(settings *config.Settings) (*Store, error) {
 	}
 
 	return &Store{
-		db:                 db,
+		Db:                 db,
 		DevicesAPIGRPCAddr: settings.DevicesAPIGRPCAddr,
 	}, nil
 }
@@ -54,7 +54,7 @@ func (s *Store) StoreSegmentMetadata(ctx context.Context, vehicleTokenId uint64,
 	endHex := h3.FromGeo(h3.GeoCoord{Latitude: endLat, Longitude: endLon}, 6)
 
 	trp := models.Trip{
-		VehicleTokenID: types.NewDecimal(decimal.New(int64(vehicleTokenId)+startTime.Unix(), 0)),
+		VehicleTokenID: types.NewDecimal(decimal.New(int64(vehicleTokenId), 0)),
 		Start:          startTime,
 		StartHex:       int64(startHex),
 		End:            endTime,
@@ -63,5 +63,5 @@ func (s *Store) StoreSegmentMetadata(ctx context.Context, vehicleTokenId uint64,
 		EncryptionKey:  encryptionKey,
 	}
 
-	return trp.Insert(ctx, s.db, boil.Infer())
+	return trp.Insert(ctx, s.Db, boil.Infer())
 }
