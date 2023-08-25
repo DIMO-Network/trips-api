@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/DIMO-Network/trips-api/models"
@@ -12,6 +13,7 @@ import (
 	"github.com/uber/h3-go/v3"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
+	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
 
 // Store connected to postgres db containing trip information and validates user
@@ -54,9 +56,11 @@ func (s *Store) StoreSegmentMetadata(ctx context.Context, vehicleTokenId uint64,
 	endHex := h3.FromGeo(h3.GeoCoord{Latitude: endLat, Longitude: endLon}, 6)
 
 	trp := models.Trip{
-		VehicleTokenID: types.NewDecimal(decimal.New(int64(vehicleTokenId), 0)),
+		VehicleTokenID: types.NewDecimal(decimal.New(int64(vehicleTokenId)+time.Now().Unix(), 0)),
 		Start:          startTime,
 		StartHex:       int64(startHex),
+		StartPosition:  pgeo.NewNullPoint(pgeo.NewPoint(startLon, startLat), true),
+		EndPosition:    pgeo.NewNullPoint(pgeo.NewPoint(endLon, endLat), true),
 		End:            endTime,
 		EndHex:         int64(endHex),
 		BunldrID:       bundlrID,

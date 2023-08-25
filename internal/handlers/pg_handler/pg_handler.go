@@ -41,8 +41,10 @@ func (h *Handler) Segments(c *fiber.Ctx) error {
 			models.TripColumns.VehicleTokenID,
 			models.TripColumns.Start,
 			models.TripColumns.StartHex,
+			models.TripColumns.StartPosition,
 			models.TripColumns.End,
-			models.TripColumns.EndHex),
+			models.TripColumns.EndHex,
+			models.TripColumns.EndPosition),
 	).All(c.Context(), h.Db)
 	if err != nil {
 		return err

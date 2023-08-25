@@ -19,6 +19,7 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/queries/qmhelper"
 	"github.com/volatiletech/sqlboiler/v4/types"
+	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 	"github.com/volatiletech/strmangle"
 )
 
@@ -32,6 +33,8 @@ type Trip struct {
 	BunldrID       string            `boil:"bunldr_id" json:"bunldr_id" toml:"bunldr_id" yaml:"bunldr_id"`
 	EncryptionKey  []byte            `boil:"encryption_key" json:"encryption_key" toml:"encryption_key" yaml:"encryption_key"`
 	TripTokenID    types.NullDecimal `boil:"trip_token_id" json:"trip_token_id,omitempty" toml:"trip_token_id" yaml:"trip_token_id,omitempty"`
+	StartPosition  pgeo.NullPoint    `boil:"start_position" json:"start_position,omitempty" toml:"start_position" yaml:"start_position,omitempty"`
+	EndPosition    pgeo.NullPoint    `boil:"end_position" json:"end_position,omitempty" toml:"end_position" yaml:"end_position,omitempty"`
 
 	R *tripR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L tripL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -46,6 +49,8 @@ var TripColumns = struct {
 	BunldrID       string
 	EncryptionKey  string
 	TripTokenID    string
+	StartPosition  string
+	EndPosition    string
 }{
 	VehicleTokenID: "vehicle_token_id",
 	Start:          "start",
@@ -55,6 +60,8 @@ var TripColumns = struct {
 	BunldrID:       "bunldr_id",
 	EncryptionKey:  "encryption_key",
 	TripTokenID:    "trip_token_id",
+	StartPosition:  "start_position",
+	EndPosition:    "end_position",
 }
 
 var TripTableColumns = struct {
@@ -66,6 +73,8 @@ var TripTableColumns = struct {
 	BunldrID       string
 	EncryptionKey  string
 	TripTokenID    string
+	StartPosition  string
+	EndPosition    string
 }{
 	VehicleTokenID: "trips.vehicle_token_id",
 	Start:          "trips.start",
@@ -75,6 +84,8 @@ var TripTableColumns = struct {
 	BunldrID:       "trips.bunldr_id",
 	EncryptionKey:  "trips.encryption_key",
 	TripTokenID:    "trips.trip_token_id",
+	StartPosition:  "trips.start_position",
+	EndPosition:    "trips.end_position",
 }
 
 // Generated where
@@ -202,6 +213,30 @@ func (w whereHelpertypes_NullDecimal) IsNotNull() qm.QueryMod {
 	return qmhelper.WhereIsNotNull(w.field)
 }
 
+type whereHelperpgeo_NullPoint struct{ field string }
+
+func (w whereHelperpgeo_NullPoint) EQ(x pgeo.NullPoint) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelperpgeo_NullPoint) NEQ(x pgeo.NullPoint) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelperpgeo_NullPoint) LT(x pgeo.NullPoint) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelperpgeo_NullPoint) LTE(x pgeo.NullPoint) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelperpgeo_NullPoint) GT(x pgeo.NullPoint) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelperpgeo_NullPoint) GTE(x pgeo.NullPoint) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
+func (w whereHelperpgeo_NullPoint) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelperpgeo_NullPoint) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
 var TripWhere = struct {
 	VehicleTokenID whereHelpertypes_Decimal
 	Start          whereHelpertime_Time
@@ -211,6 +246,8 @@ var TripWhere = struct {
 	BunldrID       whereHelperstring
 	EncryptionKey  whereHelper__byte
 	TripTokenID    whereHelpertypes_NullDecimal
+	StartPosition  whereHelperpgeo_NullPoint
+	EndPosition    whereHelperpgeo_NullPoint
 }{
 	VehicleTokenID: whereHelpertypes_Decimal{field: "\"trips_api\".\"trips\".\"vehicle_token_id\""},
 	Start:          whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"start\""},
@@ -220,6 +257,8 @@ var TripWhere = struct {
 	BunldrID:       whereHelperstring{field: "\"trips_api\".\"trips\".\"bunldr_id\""},
 	EncryptionKey:  whereHelper__byte{field: "\"trips_api\".\"trips\".\"encryption_key\""},
 	TripTokenID:    whereHelpertypes_NullDecimal{field: "\"trips_api\".\"trips\".\"trip_token_id\""},
+	StartPosition:  whereHelperpgeo_NullPoint{field: "\"trips_api\".\"trips\".\"start_position\""},
+	EndPosition:    whereHelperpgeo_NullPoint{field: "\"trips_api\".\"trips\".\"end_position\""},
 }
 
 // TripRels is where relationship names are stored.
@@ -239,9 +278,9 @@ func (*tripR) NewStruct() *tripR {
 type tripL struct{}
 
 var (
-	tripAllColumns            = []string{"vehicle_token_id", "start", "end", "start_hex", "end_hex", "bunldr_id", "encryption_key", "trip_token_id"}
+	tripAllColumns            = []string{"vehicle_token_id", "start", "end", "start_hex", "end_hex", "bunldr_id", "encryption_key", "trip_token_id", "start_position", "end_position"}
 	tripColumnsWithoutDefault = []string{"vehicle_token_id", "start", "end", "start_hex", "end_hex", "bunldr_id", "encryption_key"}
-	tripColumnsWithDefault    = []string{"trip_token_id"}
+	tripColumnsWithDefault    = []string{"trip_token_id", "start_position", "end_position"}
 	tripPrimaryKeyColumns     = []string{"vehicle_token_id", "start"}
 	tripGeneratedColumns      = []string{}
 )

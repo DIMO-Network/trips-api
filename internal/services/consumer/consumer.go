@@ -24,9 +24,19 @@ type CompletedSegmentConsumer struct {
 	*bundlr.Client
 }
 
+type Point struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
+type PointTime struct {
+	Point Point     `json:"point"`
+	Time  time.Time `json:"time"`
+}
+
 type SegmentEvent struct {
-	Start    time.Time `json:"start"`
-	End      time.Time `json:"end"`
+	Start    PointTime `json:"start"`
+	End      PointTime `json:"end"`
 	DeviceID string    `json:"deviceID"`
 }
 
@@ -48,12 +58,12 @@ func (c *CompletedSegmentConsumer) Start(ctx context.Context) {
 }
 
 func (c *CompletedSegmentConsumer) ingest(ctx context.Context, event *shared.CloudEvent[SegmentEvent]) error {
-	response, err := c.es.FetchData(event.Data.DeviceID, event.Data.Start.Format(time.RFC3339), event.Data.End.Format(time.RFC3339))
+	response, err := c.es.FetchData(event.Data.DeviceID, event.Data.Start.Time.Format(time.RFC3339), event.Data.End.Time.Format(time.RFC3339))
 	if err != nil {
 		return err
 	}
 
-	dataItem, encryptionKey, err := c.PrepareData(response, event.Data.DeviceID, event.Data.Start.Format(time.RFC3339), event.Data.End.Format(time.RFC3339))
+	dataItem, encryptionKey, err := c.PrepareData(response, event.Data.DeviceID, event.Data.Start.Time.Format(time.RFC3339), event.Data.End.Time.Format(time.RFC3339))
 	if err != nil {
 		return err
 	}
