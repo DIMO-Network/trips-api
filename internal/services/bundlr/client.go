@@ -15,7 +15,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/DIMO-Network/trips-api/models"
@@ -29,11 +28,6 @@ type Client struct {
 	url         string
 	contentType string
 	currency    string
-}
-
-type bundlrConfirmation struct {
-	ID        string    `json:"id,omitempty"`
-	Timestamp time.Time `json:"timestamp,omitempty"`
 }
 
 func New(settings *config.Settings) (*Client, error) {
