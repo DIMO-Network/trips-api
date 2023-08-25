@@ -1,4 +1,4 @@
-package uploader
+package bundlr
 
 import (
 	"crypto/aes"

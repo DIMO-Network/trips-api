@@ -30,7 +30,7 @@ type Trip struct {
 	StartHex       int64             `boil:"start_hex" json:"start_hex" toml:"start_hex" yaml:"start_hex"`
 	EndHex         int64             `boil:"end_hex" json:"end_hex" toml:"end_hex" yaml:"end_hex"`
 	BunldrID       string            `boil:"bunldr_id" json:"bunldr_id" toml:"bunldr_id" yaml:"bunldr_id"`
-	EncryptionKey  string            `boil:"encryption_key" json:"encryption_key" toml:"encryption_key" yaml:"encryption_key"`
+	EncryptionKey  []byte            `boil:"encryption_key" json:"encryption_key" toml:"encryption_key" yaml:"encryption_key"`
 	TripTokenID    types.NullDecimal `boil:"trip_token_id" json:"trip_token_id,omitempty" toml:"trip_token_id" yaml:"trip_token_id,omitempty"`
 
 	R *tripR `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -167,6 +167,15 @@ func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
 	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
 }
 
+type whereHelper__byte struct{ field string }
+
+func (w whereHelper__byte) EQ(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelper__byte) NEQ(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelper__byte) LT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelper__byte) LTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelper__byte) GT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelper__byte) GTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+
 type whereHelpertypes_NullDecimal struct{ field string }
 
 func (w whereHelpertypes_NullDecimal) EQ(x types.NullDecimal) qm.QueryMod {
@@ -200,7 +209,7 @@ var TripWhere = struct {
 	StartHex       whereHelperint64
 	EndHex         whereHelperint64
 	BunldrID       whereHelperstring
-	EncryptionKey  whereHelperstring
+	EncryptionKey  whereHelper__byte
 	TripTokenID    whereHelpertypes_NullDecimal
 }{
 	VehicleTokenID: whereHelpertypes_Decimal{field: "\"trips_api\".\"trips\".\"vehicle_token_id\""},
@@ -209,7 +218,7 @@ var TripWhere = struct {
 	StartHex:       whereHelperint64{field: "\"trips_api\".\"trips\".\"start_hex\""},
 	EndHex:         whereHelperint64{field: "\"trips_api\".\"trips\".\"end_hex\""},
 	BunldrID:       whereHelperstring{field: "\"trips_api\".\"trips\".\"bunldr_id\""},
-	EncryptionKey:  whereHelperstring{field: "\"trips_api\".\"trips\".\"encryption_key\""},
+	EncryptionKey:  whereHelper__byte{field: "\"trips_api\".\"trips\".\"encryption_key\""},
 	TripTokenID:    whereHelpertypes_NullDecimal{field: "\"trips_api\".\"trips\".\"trip_token_id\""},
 }
 
