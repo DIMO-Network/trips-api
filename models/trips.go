@@ -30,6 +30,7 @@ type Trip struct {
 	StartHex       int64             `boil:"start_hex" json:"start_hex" toml:"start_hex" yaml:"start_hex"`
 	EndHex         int64             `boil:"end_hex" json:"end_hex" toml:"end_hex" yaml:"end_hex"`
 	BunldrID       string            `boil:"bunldr_id" json:"bunldr_id" toml:"bunldr_id" yaml:"bunldr_id"`
+	EncryptionKey  string            `boil:"encryption_key" json:"encryption_key" toml:"encryption_key" yaml:"encryption_key"`
 	TripTokenID    types.NullDecimal `boil:"trip_token_id" json:"trip_token_id,omitempty" toml:"trip_token_id" yaml:"trip_token_id,omitempty"`
 
 	R *tripR `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -43,6 +44,7 @@ var TripColumns = struct {
 	StartHex       string
 	EndHex         string
 	BunldrID       string
+	EncryptionKey  string
 	TripTokenID    string
 }{
 	VehicleTokenID: "vehicle_token_id",
@@ -51,6 +53,7 @@ var TripColumns = struct {
 	StartHex:       "start_hex",
 	EndHex:         "end_hex",
 	BunldrID:       "bunldr_id",
+	EncryptionKey:  "encryption_key",
 	TripTokenID:    "trip_token_id",
 }
 
@@ -61,6 +64,7 @@ var TripTableColumns = struct {
 	StartHex       string
 	EndHex         string
 	BunldrID       string
+	EncryptionKey  string
 	TripTokenID    string
 }{
 	VehicleTokenID: "trips.vehicle_token_id",
@@ -69,6 +73,7 @@ var TripTableColumns = struct {
 	StartHex:       "trips.start_hex",
 	EndHex:         "trips.end_hex",
 	BunldrID:       "trips.bunldr_id",
+	EncryptionKey:  "trips.encryption_key",
 	TripTokenID:    "trips.trip_token_id",
 }
 
@@ -195,6 +200,7 @@ var TripWhere = struct {
 	StartHex       whereHelperint64
 	EndHex         whereHelperint64
 	BunldrID       whereHelperstring
+	EncryptionKey  whereHelperstring
 	TripTokenID    whereHelpertypes_NullDecimal
 }{
 	VehicleTokenID: whereHelpertypes_Decimal{field: "\"trips_api\".\"trips\".\"vehicle_token_id\""},
@@ -203,6 +209,7 @@ var TripWhere = struct {
 	StartHex:       whereHelperint64{field: "\"trips_api\".\"trips\".\"start_hex\""},
 	EndHex:         whereHelperint64{field: "\"trips_api\".\"trips\".\"end_hex\""},
 	BunldrID:       whereHelperstring{field: "\"trips_api\".\"trips\".\"bunldr_id\""},
+	EncryptionKey:  whereHelperstring{field: "\"trips_api\".\"trips\".\"encryption_key\""},
 	TripTokenID:    whereHelpertypes_NullDecimal{field: "\"trips_api\".\"trips\".\"trip_token_id\""},
 }
 
@@ -223,8 +230,8 @@ func (*tripR) NewStruct() *tripR {
 type tripL struct{}
 
 var (
-	tripAllColumns            = []string{"vehicle_token_id", "start", "end", "start_hex", "end_hex", "bunldr_id", "trip_token_id"}
-	tripColumnsWithoutDefault = []string{"vehicle_token_id", "start", "end", "start_hex", "end_hex", "bunldr_id"}
+	tripAllColumns            = []string{"vehicle_token_id", "start", "end", "start_hex", "end_hex", "bunldr_id", "encryption_key", "trip_token_id"}
+	tripColumnsWithoutDefault = []string{"vehicle_token_id", "start", "end", "start_hex", "end_hex", "bunldr_id", "encryption_key"}
 	tripColumnsWithDefault    = []string{"trip_token_id"}
 	tripPrimaryKeyColumns     = []string{"vehicle_token_id", "start"}
 	tripGeneratedColumns      = []string{}

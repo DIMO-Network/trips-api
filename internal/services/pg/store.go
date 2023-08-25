@@ -60,6 +60,7 @@ func (s *Store) StoreSegmentMetadata(ctx context.Context, vehicleTokenId uint64,
 		End:            endTime,
 		EndHex:         int64(endHex),
 		BunldrID:       bundlrID,
+		EncryptionKey:  encryptionKey,
 	}
 
 	return trp.Insert(ctx, s.db, boil.Infer())
