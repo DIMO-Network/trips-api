@@ -19,42 +19,58 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/queries/qmhelper"
+	"github.com/volatiletech/sqlboiler/v4/types"
 	"github.com/volatiletech/strmangle"
 )
 
 // Trip is an object representing the database table.
 type Trip struct {
-	ID           string    `boil:"id" json:"id" toml:"id" yaml:"id"`
-	UserDeviceID string    `boil:"user_device_id" json:"user_device_id" toml:"user_device_id" yaml:"user_device_id"`
-	Start        time.Time `boil:"start" json:"start" toml:"start" yaml:"start"`
-	End          null.Time `boil:"end" json:"end,omitempty" toml:"end" yaml:"end,omitempty"`
+	ID             string            `boil:"id" json:"id" toml:"id" yaml:"id"`
+	UserDeviceID   string            `boil:"user_device_id" json:"user_device_id" toml:"user_device_id" yaml:"user_device_id"`
+	Start          time.Time         `boil:"start" json:"start" toml:"start" yaml:"start"`
+	End            null.Time         `boil:"end" json:"end,omitempty" toml:"end" yaml:"end,omitempty"`
+	VehicleTokenID types.NullDecimal `boil:"vehicle_token_id" json:"vehicle_token_id,omitempty" toml:"vehicle_token_id" yaml:"vehicle_token_id,omitempty"`
+	Nonce          types.Decimal     `boil:"nonce" json:"nonce" toml:"nonce" yaml:"nonce"`
+	BundlrID       null.String       `boil:"bundlr_id" json:"bundlr_id,omitempty" toml:"bundlr_id" yaml:"bundlr_id,omitempty"`
 
 	R *tripR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L tripL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var TripColumns = struct {
-	ID           string
-	UserDeviceID string
-	Start        string
-	End          string
+	ID             string
+	UserDeviceID   string
+	Start          string
+	End            string
+	VehicleTokenID string
+	Nonce          string
+	BundlrID       string
 }{
-	ID:           "id",
-	UserDeviceID: "user_device_id",
-	Start:        "start",
-	End:          "end",
+	ID:             "id",
+	UserDeviceID:   "user_device_id",
+	Start:          "start",
+	End:            "end",
+	VehicleTokenID: "vehicle_token_id",
+	Nonce:          "nonce",
+	BundlrID:       "bundlr_id",
 }
 
 var TripTableColumns = struct {
-	ID           string
-	UserDeviceID string
-	Start        string
-	End          string
+	ID             string
+	UserDeviceID   string
+	Start          string
+	End            string
+	VehicleTokenID string
+	Nonce          string
+	BundlrID       string
 }{
-	ID:           "trips.id",
-	UserDeviceID: "trips.user_device_id",
-	Start:        "trips.start",
-	End:          "trips.end",
+	ID:             "trips.id",
+	UserDeviceID:   "trips.user_device_id",
+	Start:          "trips.start",
+	End:            "trips.end",
+	VehicleTokenID: "trips.vehicle_token_id",
+	Nonce:          "trips.nonce",
+	BundlrID:       "trips.bundlr_id",
 }
 
 // Generated where
@@ -127,24 +143,119 @@ func (w whereHelpernull_Time) GTE(x null.Time) qm.QueryMod {
 func (w whereHelpernull_Time) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
 func (w whereHelpernull_Time) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
+type whereHelpertypes_NullDecimal struct{ field string }
+
+func (w whereHelpertypes_NullDecimal) EQ(x types.NullDecimal) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpertypes_NullDecimal) NEQ(x types.NullDecimal) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpertypes_NullDecimal) LT(x types.NullDecimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpertypes_NullDecimal) LTE(x types.NullDecimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpertypes_NullDecimal) GT(x types.NullDecimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpertypes_NullDecimal) GTE(x types.NullDecimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
+func (w whereHelpertypes_NullDecimal) IsNull() qm.QueryMod { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpertypes_NullDecimal) IsNotNull() qm.QueryMod {
+	return qmhelper.WhereIsNotNull(w.field)
+}
+
+type whereHelpertypes_Decimal struct{ field string }
+
+func (w whereHelpertypes_Decimal) EQ(x types.Decimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.EQ, x)
+}
+func (w whereHelpertypes_Decimal) NEQ(x types.Decimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.NEQ, x)
+}
+func (w whereHelpertypes_Decimal) LT(x types.Decimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpertypes_Decimal) LTE(x types.Decimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpertypes_Decimal) GT(x types.Decimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpertypes_Decimal) GTE(x types.Decimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
+type whereHelpernull_String struct{ field string }
+
+func (w whereHelpernull_String) EQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_String) NEQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_String) LT(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_String) LTE(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_String) GT(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_String) GTE(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+func (w whereHelpernull_String) IN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelpernull_String) NIN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
+func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
 var TripWhere = struct {
-	ID           whereHelperstring
-	UserDeviceID whereHelperstring
-	Start        whereHelpertime_Time
-	End          whereHelpernull_Time
+	ID             whereHelperstring
+	UserDeviceID   whereHelperstring
+	Start          whereHelpertime_Time
+	End            whereHelpernull_Time
+	VehicleTokenID whereHelpertypes_NullDecimal
+	Nonce          whereHelpertypes_Decimal
+	BundlrID       whereHelpernull_String
 }{
-	ID:           whereHelperstring{field: "\"trips_api\".\"trips\".\"id\""},
-	UserDeviceID: whereHelperstring{field: "\"trips_api\".\"trips\".\"user_device_id\""},
-	Start:        whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"start\""},
-	End:          whereHelpernull_Time{field: "\"trips_api\".\"trips\".\"end\""},
+	ID:             whereHelperstring{field: "\"trips_api\".\"trips\".\"id\""},
+	UserDeviceID:   whereHelperstring{field: "\"trips_api\".\"trips\".\"user_device_id\""},
+	Start:          whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"start\""},
+	End:            whereHelpernull_Time{field: "\"trips_api\".\"trips\".\"end\""},
+	VehicleTokenID: whereHelpertypes_NullDecimal{field: "\"trips_api\".\"trips\".\"vehicle_token_id\""},
+	Nonce:          whereHelpertypes_Decimal{field: "\"trips_api\".\"trips\".\"nonce\""},
+	BundlrID:       whereHelpernull_String{field: "\"trips_api\".\"trips\".\"bundlr_id\""},
 }
 
 // TripRels is where relationship names are stored.
 var TripRels = struct {
-}{}
+	VehicleToken string
+}{
+	VehicleToken: "VehicleToken",
+}
 
 // tripR is where relationships are stored.
 type tripR struct {
+	VehicleToken *Vehicle `boil:"VehicleToken" json:"VehicleToken" toml:"VehicleToken" yaml:"VehicleToken"`
 }
 
 // NewStruct creates a new relationship struct
@@ -152,13 +263,20 @@ func (*tripR) NewStruct() *tripR {
 	return &tripR{}
 }
 
+func (r *tripR) GetVehicleToken() *Vehicle {
+	if r == nil {
+		return nil
+	}
+	return r.VehicleToken
+}
+
 // tripL is where Load methods for each relationship are stored.
 type tripL struct{}
 
 var (
-	tripAllColumns            = []string{"id", "user_device_id", "start", "end"}
-	tripColumnsWithoutDefault = []string{"id", "user_device_id", "start"}
-	tripColumnsWithDefault    = []string{"end"}
+	tripAllColumns            = []string{"id", "user_device_id", "start", "end", "vehicle_token_id", "nonce", "bundlr_id"}
+	tripColumnsWithoutDefault = []string{"id", "user_device_id", "start", "nonce"}
+	tripColumnsWithDefault    = []string{"end", "vehicle_token_id", "bundlr_id"}
 	tripPrimaryKeyColumns     = []string{"id"}
 	tripGeneratedColumns      = []string{}
 )
@@ -439,6 +557,221 @@ func (q tripQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bool,
 	}
 
 	return count > 0, nil
+}
+
+// VehicleToken pointed to by the foreign key.
+func (o *Trip) VehicleToken(mods ...qm.QueryMod) vehicleQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"token_id\" = ?", o.VehicleTokenID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	return Vehicles(queryMods...)
+}
+
+// LoadVehicleToken allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (tripL) LoadVehicleToken(ctx context.Context, e boil.ContextExecutor, singular bool, maybeTrip interface{}, mods queries.Applicator) error {
+	var slice []*Trip
+	var object *Trip
+
+	if singular {
+		var ok bool
+		object, ok = maybeTrip.(*Trip)
+		if !ok {
+			object = new(Trip)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeTrip)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeTrip))
+			}
+		}
+	} else {
+		s, ok := maybeTrip.(*[]*Trip)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeTrip)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeTrip))
+			}
+		}
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &tripR{}
+		}
+		if !queries.IsNil(object.VehicleTokenID) {
+			args = append(args, object.VehicleTokenID)
+		}
+
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &tripR{}
+			}
+
+			for _, a := range args {
+				if queries.Equal(a, obj.VehicleTokenID) {
+					continue Outer
+				}
+			}
+
+			if !queries.IsNil(obj.VehicleTokenID) {
+				args = append(args, obj.VehicleTokenID)
+			}
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`trips_api.vehicles`),
+		qm.WhereIn(`trips_api.vehicles.token_id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load Vehicle")
+	}
+
+	var resultSlice []*Vehicle
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice Vehicle")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for vehicles")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for vehicles")
+	}
+
+	if len(vehicleAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.VehicleToken = foreign
+		if foreign.R == nil {
+			foreign.R = &vehicleR{}
+		}
+		foreign.R.VehicleTokenTrips = append(foreign.R.VehicleTokenTrips, object)
+		return nil
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if queries.Equal(local.VehicleTokenID, foreign.TokenID) {
+				local.R.VehicleToken = foreign
+				if foreign.R == nil {
+					foreign.R = &vehicleR{}
+				}
+				foreign.R.VehicleTokenTrips = append(foreign.R.VehicleTokenTrips, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// SetVehicleToken of the trip to the related item.
+// Sets o.R.VehicleToken to related.
+// Adds o to related.R.VehicleTokenTrips.
+func (o *Trip) SetVehicleToken(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Vehicle) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"trips_api\".\"trips\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"vehicle_token_id"}),
+		strmangle.WhereClause("\"", "\"", 2, tripPrimaryKeyColumns),
+	)
+	values := []interface{}{related.TokenID, o.ID}
+
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, updateQuery)
+		fmt.Fprintln(writer, values)
+	}
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	queries.Assign(&o.VehicleTokenID, related.TokenID)
+	if o.R == nil {
+		o.R = &tripR{
+			VehicleToken: related,
+		}
+	} else {
+		o.R.VehicleToken = related
+	}
+
+	if related.R == nil {
+		related.R = &vehicleR{
+			VehicleTokenTrips: TripSlice{o},
+		}
+	} else {
+		related.R.VehicleTokenTrips = append(related.R.VehicleTokenTrips, o)
+	}
+
+	return nil
+}
+
+// RemoveVehicleToken relationship.
+// Sets o.R.VehicleToken to nil.
+// Removes o from all passed in related items' relationships struct.
+func (o *Trip) RemoveVehicleToken(ctx context.Context, exec boil.ContextExecutor, related *Vehicle) error {
+	var err error
+
+	queries.SetScanner(&o.VehicleTokenID, nil)
+	if _, err = o.Update(ctx, exec, boil.Whitelist("vehicle_token_id")); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	if o.R != nil {
+		o.R.VehicleToken = nil
+	}
+	if related == nil || related.R == nil {
+		return nil
+	}
+
+	for i, ri := range related.R.VehicleTokenTrips {
+		if queries.Equal(o.VehicleTokenID, ri.VehicleTokenID) {
+			continue
+		}
+
+		ln := len(related.R.VehicleTokenTrips)
+		if ln > 1 && i < ln-1 {
+			related.R.VehicleTokenTrips[i] = related.R.VehicleTokenTrips[ln-1]
+		}
+		related.R.VehicleTokenTrips = related.R.VehicleTokenTrips[:ln-1]
+		break
+	}
+	return nil
 }
 
 // Trips retrieves all the records using an executor.
