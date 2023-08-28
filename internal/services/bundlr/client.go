@@ -57,7 +57,6 @@ func (c *Client) PrepareData(data []byte, userDeviceID string, start, end time.T
 	dataItem := bundlr.BundleItem{
 		Data: arweave.Base64String(encryptedData),
 		Tags: bundlr.Tags{
-			bundlr.Tag{Name: "Trip-Type", Value: "segment"},
 			bundlr.Tag{Name: "Device-ID", Value: userDeviceID},
 			bundlr.Tag{Name: "Start-Time", Value: start.Format(time.RFC3339)},
 			bundlr.Tag{Name: "End-Time", Value: end.Format(time.RFC3339)},
