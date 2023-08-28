@@ -14,135 +14,50 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/queries/qmhelper"
-	"github.com/volatiletech/sqlboiler/v4/types"
 	"github.com/volatiletech/strmangle"
 )
 
 // Trip is an object representing the database table.
 type Trip struct {
-	VehicleTokenID types.Decimal     `boil:"vehicle_token_id" json:"vehicle_token_id" toml:"vehicle_token_id" yaml:"vehicle_token_id"`
-	Start          time.Time         `boil:"start" json:"start" toml:"start" yaml:"start"`
-	End            time.Time         `boil:"end" json:"end" toml:"end" yaml:"end"`
-	StartHex       int64             `boil:"start_hex" json:"start_hex" toml:"start_hex" yaml:"start_hex"`
-	EndHex         int64             `boil:"end_hex" json:"end_hex" toml:"end_hex" yaml:"end_hex"`
-	BunldrID       string            `boil:"bunldr_id" json:"bunldr_id" toml:"bunldr_id" yaml:"bunldr_id"`
-	EncryptionKey  string            `boil:"encryption_key" json:"encryption_key" toml:"encryption_key" yaml:"encryption_key"`
-	TripTokenID    types.NullDecimal `boil:"trip_token_id" json:"trip_token_id,omitempty" toml:"trip_token_id" yaml:"trip_token_id,omitempty"`
+	ID           string    `boil:"id" json:"id" toml:"id" yaml:"id"`
+	UserDeviceID string    `boil:"user_device_id" json:"user_device_id" toml:"user_device_id" yaml:"user_device_id"`
+	Start        time.Time `boil:"start" json:"start" toml:"start" yaml:"start"`
+	End          null.Time `boil:"end" json:"end,omitempty" toml:"end" yaml:"end,omitempty"`
 
 	R *tripR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L tripL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var TripColumns = struct {
-	VehicleTokenID string
-	Start          string
-	End            string
-	StartHex       string
-	EndHex         string
-	BunldrID       string
-	EncryptionKey  string
-	TripTokenID    string
+	ID           string
+	UserDeviceID string
+	Start        string
+	End          string
 }{
-	VehicleTokenID: "vehicle_token_id",
-	Start:          "start",
-	End:            "end",
-	StartHex:       "start_hex",
-	EndHex:         "end_hex",
-	BunldrID:       "bunldr_id",
-	EncryptionKey:  "encryption_key",
-	TripTokenID:    "trip_token_id",
+	ID:           "id",
+	UserDeviceID: "user_device_id",
+	Start:        "start",
+	End:          "end",
 }
 
 var TripTableColumns = struct {
-	VehicleTokenID string
-	Start          string
-	End            string
-	StartHex       string
-	EndHex         string
-	BunldrID       string
-	EncryptionKey  string
-	TripTokenID    string
+	ID           string
+	UserDeviceID string
+	Start        string
+	End          string
 }{
-	VehicleTokenID: "trips.vehicle_token_id",
-	Start:          "trips.start",
-	End:            "trips.end",
-	StartHex:       "trips.start_hex",
-	EndHex:         "trips.end_hex",
-	BunldrID:       "trips.bunldr_id",
-	EncryptionKey:  "trips.encryption_key",
-	TripTokenID:    "trips.trip_token_id",
+	ID:           "trips.id",
+	UserDeviceID: "trips.user_device_id",
+	Start:        "trips.start",
+	End:          "trips.end",
 }
 
 // Generated where
-
-type whereHelpertypes_Decimal struct{ field string }
-
-func (w whereHelpertypes_Decimal) EQ(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.EQ, x)
-}
-func (w whereHelpertypes_Decimal) NEQ(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.NEQ, x)
-}
-func (w whereHelpertypes_Decimal) LT(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpertypes_Decimal) LTE(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpertypes_Decimal) GT(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpertypes_Decimal) GTE(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-
-type whereHelpertime_Time struct{ field string }
-
-func (w whereHelpertime_Time) EQ(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.EQ, x)
-}
-func (w whereHelpertime_Time) NEQ(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.NEQ, x)
-}
-func (w whereHelpertime_Time) LT(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpertime_Time) LTE(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpertime_Time) GT(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
-
-type whereHelperint64 struct{ field string }
-
-func (w whereHelperint64) EQ(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperint64) NEQ(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperint64) LT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperint64) LTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperint64) GT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperint64) GTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-func (w whereHelperint64) IN(slice []int64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
-func (w whereHelperint64) NIN(slice []int64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
-}
 
 type whereHelperstring struct{ field string }
 
@@ -167,50 +82,61 @@ func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
 	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
 }
 
-type whereHelpertypes_NullDecimal struct{ field string }
+type whereHelpertime_Time struct{ field string }
 
-func (w whereHelpertypes_NullDecimal) EQ(x types.NullDecimal) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, false, x)
+func (w whereHelpertime_Time) EQ(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.EQ, x)
 }
-func (w whereHelpertypes_NullDecimal) NEQ(x types.NullDecimal) qm.QueryMod {
-	return qmhelper.WhereNullEQ(w.field, true, x)
+func (w whereHelpertime_Time) NEQ(x time.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.NEQ, x)
 }
-func (w whereHelpertypes_NullDecimal) LT(x types.NullDecimal) qm.QueryMod {
+func (w whereHelpertime_Time) LT(x time.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LT, x)
 }
-func (w whereHelpertypes_NullDecimal) LTE(x types.NullDecimal) qm.QueryMod {
+func (w whereHelpertime_Time) LTE(x time.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LTE, x)
 }
-func (w whereHelpertypes_NullDecimal) GT(x types.NullDecimal) qm.QueryMod {
+func (w whereHelpertime_Time) GT(x time.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GT, x)
 }
-func (w whereHelpertypes_NullDecimal) GTE(x types.NullDecimal) qm.QueryMod {
+func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
-func (w whereHelpertypes_NullDecimal) IsNull() qm.QueryMod { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpertypes_NullDecimal) IsNotNull() qm.QueryMod {
-	return qmhelper.WhereIsNotNull(w.field)
+type whereHelpernull_Time struct{ field string }
+
+func (w whereHelpernull_Time) EQ(x null.Time) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_Time) NEQ(x null.Time) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_Time) LT(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_Time) LTE(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_Time) GT(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_Time) GTE(x null.Time) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
+func (w whereHelpernull_Time) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_Time) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
 var TripWhere = struct {
-	VehicleTokenID whereHelpertypes_Decimal
-	Start          whereHelpertime_Time
-	End            whereHelpertime_Time
-	StartHex       whereHelperint64
-	EndHex         whereHelperint64
-	BunldrID       whereHelperstring
-	EncryptionKey  whereHelperstring
-	TripTokenID    whereHelpertypes_NullDecimal
+	ID           whereHelperstring
+	UserDeviceID whereHelperstring
+	Start        whereHelpertime_Time
+	End          whereHelpernull_Time
 }{
-	VehicleTokenID: whereHelpertypes_Decimal{field: "\"trips_api\".\"trips\".\"vehicle_token_id\""},
-	Start:          whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"start\""},
-	End:            whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"end\""},
-	StartHex:       whereHelperint64{field: "\"trips_api\".\"trips\".\"start_hex\""},
-	EndHex:         whereHelperint64{field: "\"trips_api\".\"trips\".\"end_hex\""},
-	BunldrID:       whereHelperstring{field: "\"trips_api\".\"trips\".\"bunldr_id\""},
-	EncryptionKey:  whereHelperstring{field: "\"trips_api\".\"trips\".\"encryption_key\""},
-	TripTokenID:    whereHelpertypes_NullDecimal{field: "\"trips_api\".\"trips\".\"trip_token_id\""},
+	ID:           whereHelperstring{field: "\"trips_api\".\"trips\".\"id\""},
+	UserDeviceID: whereHelperstring{field: "\"trips_api\".\"trips\".\"user_device_id\""},
+	Start:        whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"start\""},
+	End:          whereHelpernull_Time{field: "\"trips_api\".\"trips\".\"end\""},
 }
 
 // TripRels is where relationship names are stored.
@@ -230,10 +156,10 @@ func (*tripR) NewStruct() *tripR {
 type tripL struct{}
 
 var (
-	tripAllColumns            = []string{"vehicle_token_id", "start", "end", "start_hex", "end_hex", "bunldr_id", "encryption_key", "trip_token_id"}
-	tripColumnsWithoutDefault = []string{"vehicle_token_id", "start", "end", "start_hex", "end_hex", "bunldr_id", "encryption_key"}
-	tripColumnsWithDefault    = []string{"trip_token_id"}
-	tripPrimaryKeyColumns     = []string{"vehicle_token_id", "start"}
+	tripAllColumns            = []string{"id", "user_device_id", "start", "end"}
+	tripColumnsWithoutDefault = []string{"id", "user_device_id", "start"}
+	tripColumnsWithDefault    = []string{"end"}
+	tripPrimaryKeyColumns     = []string{"id"}
 	tripGeneratedColumns      = []string{}
 )
 
@@ -528,7 +454,7 @@ func Trips(mods ...qm.QueryMod) tripQuery {
 
 // FindTrip retrieves a single record by ID with an executor.
 // If selectCols is empty Find will return all columns.
-func FindTrip(ctx context.Context, exec boil.ContextExecutor, vehicleTokenID types.Decimal, start time.Time, selectCols ...string) (*Trip, error) {
+func FindTrip(ctx context.Context, exec boil.ContextExecutor, iD string, selectCols ...string) (*Trip, error) {
 	tripObj := &Trip{}
 
 	sel := "*"
@@ -536,10 +462,10 @@ func FindTrip(ctx context.Context, exec boil.ContextExecutor, vehicleTokenID typ
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"trips_api\".\"trips\" where \"vehicle_token_id\"=$1 AND \"start\"=$2", sel,
+		"select %s from \"trips_api\".\"trips\" where \"id\"=$1", sel,
 	)
 
-	q := queries.Raw(query, vehicleTokenID, start)
+	q := queries.Raw(query, iD)
 
 	err := q.Bind(ctx, exec, tripObj)
 	if err != nil {
@@ -891,7 +817,7 @@ func (o *Trip) Delete(ctx context.Context, exec boil.ContextExecutor) (int64, er
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), tripPrimaryKeyMapping)
-	sql := "DELETE FROM \"trips_api\".\"trips\" WHERE \"vehicle_token_id\"=$1 AND \"start\"=$2"
+	sql := "DELETE FROM \"trips_api\".\"trips\" WHERE \"id\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -988,7 +914,7 @@ func (o TripSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) (in
 // Reload refetches the object from the database
 // using the primary keys with an executor.
 func (o *Trip) Reload(ctx context.Context, exec boil.ContextExecutor) error {
-	ret, err := FindTrip(ctx, exec, o.VehicleTokenID, o.Start)
+	ret, err := FindTrip(ctx, exec, o.ID)
 	if err != nil {
 		return err
 	}
@@ -1027,16 +953,16 @@ func (o *TripSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor) er
 }
 
 // TripExists checks if the Trip row exists.
-func TripExists(ctx context.Context, exec boil.ContextExecutor, vehicleTokenID types.Decimal, start time.Time) (bool, error) {
+func TripExists(ctx context.Context, exec boil.ContextExecutor, iD string) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"trips_api\".\"trips\" where \"vehicle_token_id\"=$1 AND \"start\"=$2 limit 1)"
+	sql := "select exists(select 1 from \"trips_api\".\"trips\" where \"id\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
 		fmt.Fprintln(writer, sql)
-		fmt.Fprintln(writer, vehicleTokenID, start)
+		fmt.Fprintln(writer, iD)
 	}
-	row := exec.QueryRowContext(ctx, sql, vehicleTokenID, start)
+	row := exec.QueryRowContext(ctx, sql, iD)
 
 	err := row.Scan(&exists)
 	if err != nil {
@@ -1048,5 +974,5 @@ func TripExists(ctx context.Context, exec boil.ContextExecutor, vehicleTokenID t
 
 // Exists checks if the Trip row exists.
 func (o *Trip) Exists(ctx context.Context, exec boil.ContextExecutor) (bool, error) {
-	return TripExists(ctx, exec, o.VehicleTokenID, o.Start)
+	return TripExists(ctx, exec, o.ID)
 }

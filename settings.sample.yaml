@@ -1,8 +1,8 @@
-DB_USER: postgres
-DB_PASSWORD: postgres
-DB_PORT: 5433
+DB_USER: dimo
+DB_PASSWORD: dimo
+DB_PORT: 5432
 DB_HOST: localhost
-DB_NAME: pg_db
+DB_NAME: trips_api
 KAFKA_BROKERS: localhost:9092
 JWT_KEY_SET_URL: https://auth.dev.dimo.zone/keys
 DEVICES_API_GRPC_ADDR:

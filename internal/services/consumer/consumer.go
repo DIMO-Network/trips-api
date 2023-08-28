@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/kafka"
 	"github.com/DIMO-Network/trips-api/internal/config"
@@ -18,10 +17,9 @@ import (
 type CompletedSegmentConsumer struct {
 	config kafka.Config
 	logger *zerolog.Logger
-	es     *es_store.Store
+	es     *es_store.Client
 	pg     *pg_store.Store
-	grpc   pb_devices.UserDeviceServiceClient
-	*bundlr.Client
+	bundlr *bundlr.Client
 }
 
 type SegmentEvent struct {
@@ -30,14 +28,14 @@ type SegmentEvent struct {
 	DeviceID string    `json:"deviceID"`
 }
 
-func New(es *es_store.Store, bundlrClient *bundlr.Client, pg *pg_store.Store, grpcDevices pb_devices.UserDeviceServiceClient, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
+func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
 	kc := kafka.Config{
 		Brokers: strings.Split(settings.KafkaBrokers, ","),
 		Topic:   settings.TripEventTopic,
 		Group:   "segmenter",
 	}
 
-	return &CompletedSegmentConsumer{kc, logger, es, pg, grpcDevices, bundlrClient}, nil
+	return &CompletedSegmentConsumer{kc, logger, es, pg, bundlrClient}, nil
 }
 
 func (c *CompletedSegmentConsumer) Start(ctx context.Context) {
@@ -48,27 +46,26 @@ func (c *CompletedSegmentConsumer) Start(ctx context.Context) {
 }
 
 func (c *CompletedSegmentConsumer) ingest(ctx context.Context, event *shared.CloudEvent[SegmentEvent]) error {
-	response, err := c.es.FetchData(event.Data.DeviceID, event.Data.Start.Format(time.RFC3339), event.Data.End.Format(time.RFC3339))
+	response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start, event.Data.End)
 	if err != nil {
 		return err
 	}
 
-	dataItem, encryptionKey, err := c.PrepareData(response, event.Data.DeviceID, event.Data.Start.Format(time.RFC3339), event.Data.End.Format(time.RFC3339))
-	if err != nil {
+	if _, _, err := c.bundlr.PrepareData(response, event.Data.DeviceID, event.Data.Start, event.Data.End); err != nil {
 		return err
 	}
 
-	userDevice, err := c.grpc.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{
-		Id: event.Data.DeviceID,
-	})
-	if err != nil {
-		return err
-	}
+	// userDevice, err := c.grpc.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{
+	// 	Id: event.Data.DeviceID,
+	// })
+	// if err != nil {
+	// 	return err
+	// }
 
-	err = c.pg.StoreSegmentMetadata(ctx, *userDevice.TokenId, encryptionKey, response, dataItem.Id.Base64())
-	if err != nil {
-		return err
-	}
+	// err = c.pg.StoreSegmentMetadata(ctx, *userDevice.TokenId, encryptionKey, response, dataItem.Id.Base64())
+	// if err != nil {
+	// 	return err
+	// }
 	// upload
 
 	return nil
