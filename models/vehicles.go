@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
-	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -26,8 +25,8 @@ import (
 // Vehicle is an object representing the database table.
 type Vehicle struct {
 	TokenID       types.Decimal `boil:"token_id" json:"token_id" toml:"token_id" yaml:"token_id"`
-	UserDeviceID  null.String   `boil:"user_device_id" json:"user_device_id,omitempty" toml:"user_device_id" yaml:"user_device_id,omitempty"`
-	EncryptionKey null.String   `boil:"encryption_key" json:"encryption_key,omitempty" toml:"encryption_key" yaml:"encryption_key,omitempty"`
+	UserDeviceID  string        `boil:"user_device_id" json:"user_device_id" toml:"user_device_id" yaml:"user_device_id"`
+	EncryptionKey []byte        `boil:"encryption_key" json:"encryption_key" toml:"encryption_key" yaml:"encryption_key"`
 
 	R *vehicleR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L vehicleL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -55,14 +54,35 @@ var VehicleTableColumns = struct {
 
 // Generated where
 
+type whereHelpertypes_Decimal struct{ field string }
+
+func (w whereHelpertypes_Decimal) EQ(x types.Decimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.EQ, x)
+}
+func (w whereHelpertypes_Decimal) NEQ(x types.Decimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.NEQ, x)
+}
+func (w whereHelpertypes_Decimal) LT(x types.Decimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpertypes_Decimal) LTE(x types.Decimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpertypes_Decimal) GT(x types.Decimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpertypes_Decimal) GTE(x types.Decimal) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
 var VehicleWhere = struct {
 	TokenID       whereHelpertypes_Decimal
-	UserDeviceID  whereHelpernull_String
-	EncryptionKey whereHelpernull_String
+	UserDeviceID  whereHelperstring
+	EncryptionKey whereHelper__byte
 }{
 	TokenID:       whereHelpertypes_Decimal{field: "\"trips_api\".\"vehicles\".\"token_id\""},
-	UserDeviceID:  whereHelpernull_String{field: "\"trips_api\".\"vehicles\".\"user_device_id\""},
-	EncryptionKey: whereHelpernull_String{field: "\"trips_api\".\"vehicles\".\"encryption_key\""},
+	UserDeviceID:  whereHelperstring{field: "\"trips_api\".\"vehicles\".\"user_device_id\""},
+	EncryptionKey: whereHelper__byte{field: "\"trips_api\".\"vehicles\".\"encryption_key\""},
 }
 
 // VehicleRels is where relationship names are stored.
@@ -94,8 +114,8 @@ type vehicleL struct{}
 
 var (
 	vehicleAllColumns            = []string{"token_id", "user_device_id", "encryption_key"}
-	vehicleColumnsWithoutDefault = []string{"token_id"}
-	vehicleColumnsWithDefault    = []string{"user_device_id", "encryption_key"}
+	vehicleColumnsWithoutDefault = []string{"token_id", "user_device_id", "encryption_key"}
+	vehicleColumnsWithDefault    = []string{}
 	vehiclePrimaryKeyColumns     = []string{"token_id"}
 	vehicleGeneratedColumns      = []string{}
 )

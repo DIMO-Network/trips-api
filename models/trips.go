@@ -30,7 +30,7 @@ type Trip struct {
 	Start          time.Time         `boil:"start" json:"start" toml:"start" yaml:"start"`
 	End            null.Time         `boil:"end" json:"end,omitempty" toml:"end" yaml:"end,omitempty"`
 	VehicleTokenID types.NullDecimal `boil:"vehicle_token_id" json:"vehicle_token_id,omitempty" toml:"vehicle_token_id" yaml:"vehicle_token_id,omitempty"`
-	Nonce          types.Decimal     `boil:"nonce" json:"nonce" toml:"nonce" yaml:"nonce"`
+	Nonce          []byte            `boil:"nonce" json:"nonce" toml:"nonce" yaml:"nonce"`
 	BundlrID       null.String       `boil:"bundlr_id" json:"bundlr_id,omitempty" toml:"bundlr_id" yaml:"bundlr_id,omitempty"`
 
 	R *tripR `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -169,26 +169,14 @@ func (w whereHelpertypes_NullDecimal) IsNotNull() qm.QueryMod {
 	return qmhelper.WhereIsNotNull(w.field)
 }
 
-type whereHelpertypes_Decimal struct{ field string }
+type whereHelper__byte struct{ field string }
 
-func (w whereHelpertypes_Decimal) EQ(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.EQ, x)
-}
-func (w whereHelpertypes_Decimal) NEQ(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.NEQ, x)
-}
-func (w whereHelpertypes_Decimal) LT(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpertypes_Decimal) LTE(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpertypes_Decimal) GT(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpertypes_Decimal) GTE(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
+func (w whereHelper__byte) EQ(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelper__byte) NEQ(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelper__byte) LT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelper__byte) LTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelper__byte) GT(x []byte) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelper__byte) GTE(x []byte) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
 
 type whereHelpernull_String struct{ field string }
 
@@ -234,7 +222,7 @@ var TripWhere = struct {
 	Start          whereHelpertime_Time
 	End            whereHelpernull_Time
 	VehicleTokenID whereHelpertypes_NullDecimal
-	Nonce          whereHelpertypes_Decimal
+	Nonce          whereHelper__byte
 	BundlrID       whereHelpernull_String
 }{
 	ID:             whereHelperstring{field: "\"trips_api\".\"trips\".\"id\""},
@@ -242,7 +230,7 @@ var TripWhere = struct {
 	Start:          whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"start\""},
 	End:            whereHelpernull_Time{field: "\"trips_api\".\"trips\".\"end\""},
 	VehicleTokenID: whereHelpertypes_NullDecimal{field: "\"trips_api\".\"trips\".\"vehicle_token_id\""},
-	Nonce:          whereHelpertypes_Decimal{field: "\"trips_api\".\"trips\".\"nonce\""},
+	Nonce:          whereHelper__byte{field: "\"trips_api\".\"trips\".\"nonce\""},
 	BundlrID:       whereHelpernull_String{field: "\"trips_api\".\"trips\".\"bundlr_id\""},
 }
 
