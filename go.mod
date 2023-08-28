@@ -124,6 +124,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pressly/goose v2.7.0+incompatible
 	github.com/rs/zerolog v1.28.0
+	github.com/segmentio/ksuid v1.0.4
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/volatiletech/sqlboiler/v4 v4.13.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
