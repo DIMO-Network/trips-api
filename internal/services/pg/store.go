@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/DIMO-Network/trips-api/models"
@@ -56,7 +55,7 @@ func (s *Store) StoreSegmentMetadata(ctx context.Context, vehicleTokenId uint64,
 	endHex := h3.FromGeo(h3.GeoCoord{Latitude: endLat, Longitude: endLon}, 6)
 
 	trp := models.Trip{
-		VehicleTokenID: types.NewDecimal(decimal.New(int64(vehicleTokenId)+time.Now().Unix(), 0)),
+		VehicleTokenID: types.NewDecimal(decimal.New(int64(vehicleTokenId), 0)),
 		Start:          startTime,
 		StartHex:       int64(startHex),
 		StartPosition:  pgeo.NewNullPoint(pgeo.NewPoint(startLon, startLat), true),
