@@ -16,9 +16,7 @@ import (
 )
 
 type Client struct {
-	Signer      *bundlr.EthereumSigner
-	url         string
-	contentType string
+	Signer *bundlr.EthereumSigner
 }
 
 func New(settings *config.Settings) (*Client, error) {
@@ -28,9 +26,7 @@ func New(settings *config.Settings) (*Client, error) {
 	}
 
 	return &Client{
-		Signer:      signer,
-		url:         settings.BundlrNetwork,
-		contentType: "application/octet-stream",
+		Signer: signer,
 	}, nil
 }
 
