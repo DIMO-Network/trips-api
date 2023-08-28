@@ -19,7 +19,7 @@ type CompletedSegmentConsumer struct {
 	logger *zerolog.Logger
 	es     *es_store.Client
 	pg     *pg_store.Store
-	*bundlr.Client
+	bundlr *bundlr.Client
 }
 
 type SegmentEvent struct {
@@ -51,7 +51,7 @@ func (c *CompletedSegmentConsumer) ingest(ctx context.Context, event *shared.Clo
 		return err
 	}
 
-	if _, _, err := c.PrepareData(response, event.Data.DeviceID, event.Data.Start, event.Data.End); err != nil {
+	if _, _, err := c.bundlr.PrepareData(response, event.Data.DeviceID, event.Data.Start, event.Data.End); err != nil {
 		return err
 	}
 
