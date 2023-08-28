@@ -6,7 +6,7 @@ ADD COLUMN vehicle_token_id numeric(78, 0)
     CONSTRAINT vehicle_token_id_fkey REFERENCES vehicles(token_id);
 
 ALTER TABLE trips
-ADD COLUMN nonce numeric(20) NOT NULL;
+ADD COLUMN nonce bytea NOT NULL;
 
 ALTER TABLE trips
 ADD COLUMN bundlr_id text;

@@ -4,8 +4,8 @@
 CREATE TABLE vehicles 
 (
     token_id NUMERIC(78, 0) PRIMARY KEY, 
-    user_device_id CHAR(27), 
-    encryption_key TEXT
+    user_device_id CHAR(27) NOT NULL, 
+    encryption_key BYTEA NOT NULL
 );
 -- +goose StatementEnd
 
