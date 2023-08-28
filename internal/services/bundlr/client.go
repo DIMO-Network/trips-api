@@ -49,7 +49,7 @@ func (c *Client) PrepareData(data []byte, userDeviceID string, start, end time.T
 	}
 	encryptionKey := hex.EncodeToString(bytes)
 
-	encryptedData, err := c.encrypt(compressedData, bytes)
+	encryptedData, nonce, err := c.encrypt(compressedData, bytes)
 	if err != nil {
 		return bundlr.BundleItem{}, encryptionKey, err
 	}
@@ -61,6 +61,7 @@ func (c *Client) PrepareData(data []byte, userDeviceID string, start, end time.T
 			bundlr.Tag{Name: "Device-ID", Value: userDeviceID},
 			bundlr.Tag{Name: "Start-Time", Value: start.Format(time.RFC3339)},
 			bundlr.Tag{Name: "End-Time", Value: end.Format(time.RFC3339)},
+			bundlr.Tag{Name: "Nonce", Value: hex.EncodeToString(nonce)},
 		},
 	}
 
@@ -90,21 +91,21 @@ func (c *Client) compress(data []byte, fileName string) ([]byte, error) {
 	return buf.Bytes(), w.Close()
 }
 
-func (c *Client) encrypt(data, key []byte) ([]byte, error) {
+func (c *Client) encrypt(data, key []byte) ([]byte, []byte, error) {
 	aes, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	aesgcm, err := cipher.NewGCM(aes)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	nonce := make([]byte, aesgcm.NonceSize())
 	if _, err := rand.Read(nonce); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return aesgcm.Seal(nil, nonce, data, nil), nil
+	return aesgcm.Seal(nil, nonce, data, nil), nonce, nil
 }
