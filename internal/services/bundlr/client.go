@@ -60,9 +60,7 @@ func (c *Client) PrepareData(data []byte, userDeviceID string, start, end time.T
 		},
 	}
 
-	err = dataItem.Sign(c.Signer)
-
-	return dataItem, encryptionKey, err
+	return dataItem, encryptionKey, dataItem.Sign(c.Signer)
 }
 
 func (c *Client) Upload(dataItem bundlr.BundleItem) (string, error) {
