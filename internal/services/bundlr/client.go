@@ -31,23 +31,16 @@ func New(settings *config.Settings) (*Client, error) {
 }
 
 // PrepareData prepares data for uploading to bundlr by compressing and encrypting input.
-func (c *Client) PrepareData(data []byte, userDeviceID string, start, end time.Time) (bundlr.BundleItem, string, error) {
+func (c *Client) PrepareData(data []byte, encryptionKey []byte, userDeviceID string, start, end time.Time) (bundlr.BundleItem, []byte, error) {
 	fileName := fmt.Sprintf("%s-%d-%d.zip", userDeviceID, start.Unix(), end.Unix())
 	compressedData, err := c.compress(data, fileName)
 	if err != nil {
-		return bundlr.BundleItem{}, "", err
+		return bundlr.BundleItem{}, []byte{}, err
 	}
 
-	// generating random 32 byte key for AES-256
-	bytes := make([]byte, 32)
-	if _, err := rand.Read(bytes); err != nil {
-		return bundlr.BundleItem{}, "", err
-	}
-	encryptionKey := hex.EncodeToString(bytes)
-
-	encryptedData, nonce, err := c.encrypt(compressedData, bytes)
+	encryptedData, nonce, err := c.encrypt(compressedData, encryptionKey)
 	if err != nil {
-		return bundlr.BundleItem{}, encryptionKey, err
+		return bundlr.BundleItem{}, []byte{}, err
 	}
 
 	dataItem := bundlr.BundleItem{
@@ -60,7 +53,7 @@ func (c *Client) PrepareData(data []byte, userDeviceID string, start, end time.T
 		},
 	}
 
-	return dataItem, encryptionKey, dataItem.Sign(c.Signer)
+	return dataItem, nonce, dataItem.Sign(c.Signer)
 }
 
 func (c *Client) Upload(dataItem bundlr.BundleItem) (string, error) {

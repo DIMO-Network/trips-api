@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/DIMO-Network/devices-api v1.20.12
 	github.com/elastic/go-elasticsearch/v8 v8.7.0
+	github.com/ethereum/go-ethereum v1.12.0
 	github.com/friendsofgo/errors v0.9.2
 	github.com/gofiber/fiber/v2 v2.49.0
 	github.com/stretchr/testify v1.8.4
@@ -27,7 +28,7 @@ require (
 	github.com/eapache/go-xerial-snappy v0.0.0-20230111030713-bf00bc1b83b6 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.2.0 // indirect
-	github.com/ethereum/go-ethereum v1.12.0 // indirect
+	github.com/ericlagergren/decimal v0.0.0-20211103172832-aca2edc11f73 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v1.8.2 // indirect
