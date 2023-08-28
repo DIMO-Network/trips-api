@@ -20,6 +20,7 @@ type Settings struct {
 	TripEventTopic           string `yaml:"TRIP_EVENT_TOPIC"`
 	EthereumSignerPrivateKey string `yaml:"ETHEREUM_SIGNER_PRIVATE_KEY"`
 	BundlrNetwork            string `yaml:"BUNDLR_NETWORK"`
+	VehicleEvent             string `yaml:"VEHICLE_EVENT_TOPIC"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader
