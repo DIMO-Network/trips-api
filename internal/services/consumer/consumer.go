@@ -51,8 +51,7 @@ func (c *CompletedSegmentConsumer) ingest(ctx context.Context, event *shared.Clo
 		return err
 	}
 
-	_, _, err = c.PrepareData(response, event.Data.DeviceID, event.Data.Start.Format(time.RFC3339), event.Data.End.Format(time.RFC3339))
-	if err != nil {
+	if _, _, err := c.PrepareData(response, event.Data.DeviceID, event.Data.Start, event.Data.End); err != nil {
 		return err
 	}
 
