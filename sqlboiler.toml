@@ -1,9 +1,9 @@
 [psql]
 schema = "trips_api"
-dbname = "pg_db"
+dbname = "trips_api"
 blacklist = ["migrations"]
 host = "localhost"
-port = 5433
-user = "postgres"
-pass = "postgres"
+port = 5432
+user = "dimo"
+pass = "dimo"
 sslmode = "disable"

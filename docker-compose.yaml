@@ -1,44 +1,17 @@
 version: "3.9"
 
 services:
-  postgis:
-    image: kartoza/postgis
-    networks:
-      - trips-net
+  postgresql:
+    image: postgres:12.15
     ports:
-      - 5433:5432
+      - "5432:5432"
     environment:
-      - ALLOW_IP_RANGE=0.0.0.0/0
-      - POSTGRES_PASS=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_DBNAME=pg_db
+      - POSTGRES_USER=dimo
+      - POSTGRES_PASSWORD=dimo
+      - POSTGRES_DB=trips_api
     volumes:
-      - ./postgres-data:/var/lib/postgresql/
-
-  pg_tileserv:
-    image: pramsey/pg_tileserv:latest-alpine-3.12
-    networks:
-      - trips-net
-    build:
-      context: ./internal/maps/pg_tileserv
-      dockerfile: Dockerfile
-      args:
-        VERSION: latest-alpine-3.12
-    container_name: pg_tileserv
-    environment:
-      - DB_HOST=postgis
-      - POSTGRES_PASS=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_DBNAME=pg_db
-      - DATABASE_URL=postgres://postgres:postgres@postgis/pg_db
-    depends_on:
-      - postgis
-    ports:
-      - 7800:7800
-    
-networks:
-  trips-net:
-    driver: bridge
+      - postgres_data:/var/lib/postgresql/data
 
 volumes:
-  postgis_data:
+  postgres_data:
+    driver: local
