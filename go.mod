@@ -3,14 +3,11 @@ module github.com/DIMO-Network/trips-api
 go 1.18
 
 require (
+	github.com/elastic/go-elasticsearch/v8 v8.9.0
 	github.com/friendsofgo/errors v0.9.2
 	github.com/gofiber/fiber/v2 v2.46.0
-	github.com/kat-co/vala v0.0.0-20170210184112-42e1d8b61f12
-	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.4
 	github.com/swaggo/swag v1.16.1
-	github.com/tidwall/sjson v1.2.5
-	github.com/volatiletech/randomize v0.0.1
 	github.com/volatiletech/strmangle v0.0.4
 	github.com/warp-contracts/syncer v0.2.24
 )
@@ -28,6 +25,7 @@ require (
 	github.com/eapache/go-resiliency v1.3.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20230111030713-bf00bc1b83b6 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.0.0-20230329154755-1a3c63de0db6 // indirect
 	github.com/ethereum/go-ethereum v1.11.6 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
@@ -88,16 +86,16 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/spf13/viper v1.15.0 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/teivah/onecontext v1.3.0 // indirect
-	github.com/tidwall/match v1.1.1 // indirect
-	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
 	github.com/ugorji/go/codec v1.2.7 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.47.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
 	github.com/volatiletech/inflect v0.0.1 // indirect
+	github.com/volatiletech/randomize v0.0.1 // indirect
 	go.uber.org/ratelimit v0.2.0 // indirect
 	golang.org/x/crypto v0.11.0 // indirect
 	golang.org/x/exp v0.0.0-20230515195305-f3d0a9c9a5cc // indirect
@@ -122,12 +120,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/kms v1.17.3 // indirect
 	github.com/aws/smithy-go v1.11.3 // indirect
-	github.com/elastic/go-elasticsearch/v7 v7.17.1
 	github.com/lib/pq v1.10.7
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pressly/goose v2.7.0+incompatible
 	github.com/rs/zerolog v1.28.0
-	github.com/tidwall/gjson v1.14.3
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/volatiletech/sqlboiler/v4 v4.13.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect

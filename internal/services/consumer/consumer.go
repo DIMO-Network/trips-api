@@ -17,7 +17,7 @@ import (
 type CompletedSegmentConsumer struct {
 	config kafka.Config
 	logger *zerolog.Logger
-	es     *es_store.Store
+	es     *es_store.Client
 	pg     *pg_store.Store
 	*bundlr.Client
 }
@@ -28,7 +28,7 @@ type SegmentEvent struct {
 	DeviceID string    `json:"deviceID"`
 }
 
-func New(es *es_store.Store, bundlrClient *bundlr.Client, pg *pg_store.Store, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
+func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
 	kc := kafka.Config{
 		Brokers: strings.Split(settings.KafkaBrokers, ","),
 		Topic:   settings.TripEventTopic,
