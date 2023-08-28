@@ -17,7 +17,7 @@ import (
 type CompletedSegmentConsumer struct {
 	config kafka.Config
 	logger *zerolog.Logger
-	es     *es_store.Store
+	es     *es_store.Client
 	pg     *pg_store.Store
 	*bundlr.Client
 }
@@ -28,7 +28,7 @@ type SegmentEvent struct {
 	DeviceID string    `json:"deviceID"`
 }
 
-func New(es *es_store.Store, bundlrClient *bundlr.Client, pg *pg_store.Store, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
+func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, settings *config.Settings, logger *zerolog.Logger) (*CompletedSegmentConsumer, error) {
 	kc := kafka.Config{
 		Brokers: strings.Split(settings.KafkaBrokers, ","),
 		Topic:   settings.TripEventTopic,
@@ -45,14 +45,13 @@ func (c *CompletedSegmentConsumer) Start(ctx context.Context) {
 	c.logger.Info().Msg("segment consumer started.")
 }
 
-func (c *CompletedSegmentConsumer) ingest(_ context.Context, event *shared.CloudEvent[SegmentEvent]) error {
-	response, err := c.es.FetchData(event.Data.DeviceID, event.Data.Start.Format(time.RFC3339), event.Data.End.Format(time.RFC3339))
+func (c *CompletedSegmentConsumer) ingest(ctx context.Context, event *shared.CloudEvent[SegmentEvent]) error {
+	response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start, event.Data.End)
 	if err != nil {
 		return err
 	}
 
-	_, _, err = c.PrepareData(response, event.Data.DeviceID, event.Data.Start.Format(time.RFC3339), event.Data.End.Format(time.RFC3339))
-	if err != nil {
+	if _, _, err := c.PrepareData(response, event.Data.DeviceID, event.Data.Start, event.Data.End); err != nil {
 		return err
 	}
 

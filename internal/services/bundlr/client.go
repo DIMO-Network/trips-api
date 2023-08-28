@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/warp-contracts/syncer/src/utils/arweave"
@@ -34,8 +35,9 @@ func New(settings *config.Settings) (*Client, error) {
 }
 
 // PrepareData prepares data for uploading to bundlr by compressing and encrypting input.
-func (c *Client) PrepareData(data []byte, deviceID, startTime, endTime string) (bundlr.BundleItem, string, error) {
-	compressedData, err := c.compress(data, startTime, endTime)
+func (c *Client) PrepareData(data []byte, userDeviceID string, start, end time.Time) (bundlr.BundleItem, string, error) {
+	fileName := fmt.Sprintf("%s-%d-%d.zip", userDeviceID, start.Unix(), end.Unix())
+	compressedData, err := c.compress(data, fileName)
 	if err != nil {
 		return bundlr.BundleItem{}, "", err
 	}
@@ -47,7 +49,7 @@ func (c *Client) PrepareData(data []byte, deviceID, startTime, endTime string) (
 	}
 	encryptionKey := hex.EncodeToString(bytes)
 
-	encryptedData, err := c.encrypt(compressedData, bytes)
+	encryptedData, nonce, err := c.encrypt(compressedData, bytes)
 	if err != nil {
 		return bundlr.BundleItem{}, encryptionKey, err
 	}
@@ -55,14 +57,15 @@ func (c *Client) PrepareData(data []byte, deviceID, startTime, endTime string) (
 	dataItem := bundlr.BundleItem{
 		Data: arweave.Base64String(encryptedData),
 		Tags: bundlr.Tags{
-			bundlr.Tag{Name: "Trip-Type", Value: "segment"},
-			bundlr.Tag{Name: "Device-ID", Value: deviceID},
-			bundlr.Tag{Name: "Start-Time", Value: startTime},
-			bundlr.Tag{Name: "End-Time", Value: endTime},
+			bundlr.Tag{Name: "Device-ID", Value: userDeviceID},
+			bundlr.Tag{Name: "Start-Time", Value: start.Format(time.RFC3339)},
+			bundlr.Tag{Name: "End-Time", Value: end.Format(time.RFC3339)},
+			bundlr.Tag{Name: "Nonce", Value: hex.EncodeToString(nonce)},
 		},
 	}
 
 	err = dataItem.Sign(c.Signer)
+
 	return dataItem, encryptionKey, err
 }
 
@@ -71,39 +74,37 @@ func (c *Client) Upload(dataItem bundlr.BundleItem) (string, error) {
 	return "", nil
 }
 
-func (c *Client) compress(data []byte, start, end string) ([]byte, error) {
-	b := new(bytes.Buffer)
-	zw := zip.NewWriter(b)
+func (c *Client) compress(data []byte, fileName string) ([]byte, error) {
+	var buf bytes.Buffer
+	w := zip.NewWriter(&buf)
 
-	file, err := zw.Create(fmt.Sprintf("%s_%s.json", start, end))
+	f, err := w.Create(fileName)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = file.Write(data)
-	if err != nil {
+	if _, err := f.Write(data); err != nil {
 		return nil, err
 	}
 
-	err = zw.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	return b.Bytes(), nil
+	return buf.Bytes(), w.Close()
 }
 
-func (c *Client) encrypt(data, key []byte) ([]byte, error) {
-	block, err := aes.NewCipher(key)
+func (c *Client) encrypt(data, key []byte) ([]byte, []byte, error) {
+	aes, err := aes.NewCipher(key)
 	if err != nil {
-		return []byte{}, err
+		return nil, nil, err
 	}
 
-	aesGCM, err := cipher.NewGCM(block)
+	aesgcm, err := cipher.NewGCM(aes)
 	if err != nil {
-		return []byte{}, err
+		return nil, nil, err
 	}
-	nonce := make([]byte, aesGCM.NonceSize())
 
-	return aesGCM.Seal(nonce, nonce, data, nil), nil
+	nonce := make([]byte, aesgcm.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		return nil, nil, err
+	}
+
+	return aesgcm.Seal(nil, nonce, data, nil), nonce, nil
 }
