@@ -120,7 +120,7 @@ func main() {
 
 		logger.Info().Interface("settings", settings).Msg("Settings")
 
-		handler, err := pg_handler.New(pgStore, deviceClient)
+		handler := pg_handler.New(pgStore, deviceClient)
 
 		app := fiber.New()
 		app.Get("/swagger/*", swagger.HandlerDefault)
@@ -142,16 +142,6 @@ func main() {
 			}
 		}()
 
-		// sigChan := make(chan os.Signal, 1)
-		// signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-		// sig := <-sigChan
-		// logger.Info().Str("signal", sig.String()).Msg("Got signal, terminating.")
-		// cancel()
-		// <-tep.Done
-		// err = app.Shutdown()
-		// if err != nil {
-		// 	logger.Err(err).Msg("HTTP server did not shut down gracefully.")
-		// }
 		c := make(chan os.Signal, 1)                    // Create channel to signify a signal being sent with length of 1
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM) // When an interrupt or termination signal is sent, notify the channel
 		<-c                                             // This blocks the main thread until an interrupt is received

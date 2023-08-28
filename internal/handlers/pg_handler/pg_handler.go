@@ -16,8 +16,8 @@ type Handler struct {
 	grpc pb_devices.UserDeviceServiceClient
 }
 
-func New(pgStore *pg_store.Store, grpcDevices pb_devices.UserDeviceServiceClient) (*Handler, error) {
-	return &Handler{pgStore, grpcDevices}, nil
+func New(pgStore *pg_store.Store, grpcDevices pb_devices.UserDeviceServiceClient) *Handler {
+	return &Handler{pgStore, grpcDevices}
 }
 
 // Segments godoc
