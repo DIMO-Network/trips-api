@@ -45,8 +45,8 @@ func (c *CompletedSegmentConsumer) Start(ctx context.Context) {
 	c.logger.Info().Msg("segment consumer started.")
 }
 
-func (c *CompletedSegmentConsumer) ingest(_ context.Context, event *shared.CloudEvent[SegmentEvent]) error {
-	response, err := c.es.FetchData(event.Data.DeviceID, event.Data.Start.Format(time.RFC3339), event.Data.End.Format(time.RFC3339))
+func (c *CompletedSegmentConsumer) ingest(ctx context.Context, event *shared.CloudEvent[SegmentEvent]) error {
+	response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start, event.Data.End)
 	if err != nil {
 		return err
 	}
