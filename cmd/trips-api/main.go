@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/shared"
+	"github.com/DIMO-Network/shared/kafka"
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
@@ -77,12 +79,21 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to start Bunldr uploader")
 		}
 
-		consumer, err := consumer.New(esStore, bundlrClient, pgStore, deviceClient, &settings, &logger)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create consumer.")
-		}
+		consume := consumer.New(esStore, bundlrClient, pgStore, deviceClient, &logger)
 
-		consumer.Start(ctx)
+		// start completed segment consumer
+		consumer.Start(ctx, kafka.Config{
+			Brokers: strings.Split(settings.KafkaBrokers, ","),
+			Topic:   settings.TripEventTopic,
+			Group:   "completed-segment",
+		}, consume.CompletedSegment, &logger)
+
+		// start vehicle event consumer
+		consumer.Start(ctx, kafka.Config{
+			Brokers: strings.Split(settings.KafkaBrokers, ","),
+			Topic:   settings.VehicleEvent,
+			Group:   "vehicle-event",
+		}, consume.VehicleEvent, &logger)
 
 		app := fiber.New()
 		app.Get("/health", func(c *fiber.Ctx) error {
