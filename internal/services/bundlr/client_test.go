@@ -1,8 +1,6 @@
 package bundlr
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -10,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/segmentio/ksuid"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +23,12 @@ func TestPrepareData(t *testing.T) {
 	start, _ := time.Parse(time.DateOnly, "2023-08-16")
 	end, _ := time.Parse(time.DateOnly, "2023-08-17")
 
-	uploader, err := New(&config.Settings{})
+	settings, err := shared.LoadConfig[config.Settings]("settings.yaml")
+	assert.NoError(err)
+	fmt.Println("here", settings.EthereumSignerPrivateKey)
+	uploader, err := New(&config.Settings{
+		EthereumSignerPrivateKey: "1234567890123456789123456789123456789123456789123456789123456789",
+	})
 	assert.NoError(err)
 
 	fileName := fmt.Sprintf("%s-%d-%d.zip", ksuid.New().String(), start.Unix(), end.Unix())
@@ -40,29 +44,11 @@ func TestPrepareData(t *testing.T) {
 	keyString := hex.EncodeToString(key)
 	t.Logf("Key: %s", keyString)
 
-	encryptedData, _, err := uploader.encrypt(compressedData, key)
+	encryptedData, nonce, err := uploader.encrypt(compressedData, key)
 	assert.NoError(err)
 
-	// decrypt and check to make sure
-
-	//Create a new Cipher Block from the key
-	block, err := aes.NewCipher(key)
+	decryptedData, err := uploader.decrypt(encryptedData, key, nonce)
 	assert.NoError(err)
-
-	//Create a new GCM
-	aesGCM, err := cipher.NewGCM(block)
-	assert.NoError(err)
-
-	//Get the nonce size
-	nonceSize := aesGCM.NonceSize()
-
-	//Extract the nonce from the encrypted data
-	nonce, ciphertext := encryptedData[:nonceSize], encryptedData[nonceSize:]
-
-	//Decrypt the data
-	decryptedCompressedData, err := aesGCM.Open(nil, nonce, ciphertext, nil)
-	assert.NoError(err)
-
-	assert.Equal(decryptedCompressedData, compressedData)
+	assert.Equal(compressedData, decryptedData)
 
 }
