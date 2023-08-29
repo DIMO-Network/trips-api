@@ -46,28 +46,28 @@ func (s Store) GetOrGenerateEncryptionKey(ctx context.Context, deviceID string, 
 	vehicle, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(deviceID)).One(ctx, s.DB)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return s.generateKey(ctx, deviceID, grpc)
+			userDevice, err := grpc.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{
+				Id: deviceID,
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			return s.GenerateKey(ctx, deviceID, *userDevice.TokenId, grpc)
 		}
 		return nil, err
 	}
 	return vehicle, err
 }
 
-func (s Store) generateKey(ctx context.Context, deviceID string, grpc pb_devices.UserDeviceServiceClient) (*models.Vehicle, error) {
-	userDevice, err := grpc.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{
-		Id: deviceID,
-	})
-	if err != nil {
-		return nil, err
-	}
-
+func (s Store) GenerateKey(ctx context.Context, deviceID string, tokenID uint64, grpc pb_devices.UserDeviceServiceClient) (*models.Vehicle, error) {
 	encryptionKey := make([]byte, 32)
 	if _, err := rand.Read(encryptionKey); err != nil {
 		return nil, err
 	}
 
 	v := models.Vehicle{
-		TokenID:       types.NewDecimal(new(decimal.Big).SetUint64(*userDevice.TokenId)),
+		TokenID:       types.NewDecimal(new(decimal.Big).SetUint64(tokenID)),
 		UserDeviceID:  deviceID,
 		EncryptionKey: encryptionKey,
 	}

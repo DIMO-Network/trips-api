@@ -45,8 +45,9 @@ type PointTime struct {
 }
 
 type VehicleNodeMinted struct {
-	TokenId *big.Int
-	Owner   common.Address
+	ManufacturerId           *big.Int
+	TokenId                  *big.Int
+	AftermarketDeviceAddress common.Address
 }
 
 func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, devicesGRPC pb_devices.UserDeviceServiceClient, logger *zerolog.Logger) *Consumer {
@@ -104,10 +105,16 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEven
 	return nil
 }
 
-func (c *Consumer) VehicleEvent(ctx context.Context, e *shared.CloudEvent[VehicleNodeMinted]) error {
-	// event := e.(*shared.CloudEvent[VehicleNodeMinted])
+func (c *Consumer) VehicleEvent(ctx context.Context, event *shared.CloudEvent[VehicleNodeMinted]) error {
+	userDevice, err := c.grpc.GetUserDeviceByTokenId(ctx, &pb_devices.GetUserDeviceByTokenIdRequest{
+		TokenId: event.Data.TokenId.Int64(),
+	})
+	if err != nil {
+		return err
+	}
 
-	// populate vehicles table: token_id, user_device_id, encryption_key
-	// look at devices-api
+	if _, err := c.pg.GenerateKey(ctx, userDevice.Id, *userDevice.TokenId, c.grpc); err != nil {
+		return err
+	}
 	return nil
 }
