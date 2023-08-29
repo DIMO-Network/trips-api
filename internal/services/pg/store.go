@@ -71,7 +71,12 @@ func (s Store) GenerateKey(ctx context.Context, deviceID string, tokenID uint64,
 		UserDeviceID:  deviceID,
 		EncryptionKey: encryptionKey,
 	}
-	if err := v.Insert(ctx, s.DB, boil.Whitelist(models.VehicleColumns.UserDeviceID, models.VehicleColumns.TokenID, models.VehicleColumns.EncryptionKey)); err != nil {
+	if err := v.Upsert(ctx, s.DB,
+		true,
+		[]string{models.VehicleColumns.TokenID},
+		boil.Whitelist(models.VehicleColumns.UserDeviceID, models.VehicleColumns.TokenID, models.VehicleColumns.EncryptionKey),
+		boil.Whitelist(models.VehicleColumns.UserDeviceID, models.VehicleColumns.TokenID, models.VehicleColumns.EncryptionKey),
+	); err != nil {
 		return nil, err
 	}
 	return &v, nil
