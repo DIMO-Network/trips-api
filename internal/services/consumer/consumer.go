@@ -54,6 +54,8 @@ type UserDeviceMintEvent struct {
 	} `json:"nft"`
 }
 
+const UserDeviceMintEventType = "com.dimo.zone.device.mint"
+
 func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, devicesGRPC pb_devices.UserDeviceServiceClient, logger *zerolog.Logger) *Consumer {
 	return &Consumer{logger, es, pg, bundlrClient, devicesGRPC}
 }
@@ -110,11 +112,12 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEven
 }
 
 func (c *Consumer) VehicleEvent(ctx context.Context, event *shared.CloudEvent[UserDeviceMintEvent]) error {
-	c.logger.Info().Str("device", event.Data.Device.ID).Msg("vehicle node minted event recieved")
-
-	if _, err := c.pg.GenerateKey(ctx, event.Data.Device.ID, event.Data.NFT.TokenID.Uint64(), c.grpc); err != nil {
-		c.logger.Err(err).Str("device", event.Data.Device.ID).Msg("encryption key generation failed")
-		return err
+	if event.Type == UserDeviceMintEventType {
+		c.logger.Info().Str("device", event.Data.Device.ID).Msg("vehicle node minted event recieved")
+		if _, err := c.pg.GenerateKey(ctx, event.Data.Device.ID, event.Data.NFT.TokenID.Uint64(), c.grpc); err != nil {
+			c.logger.Err(err).Str("device", event.Data.Device.ID).Msg("encryption key generation failed")
+			return err
+		}
 	}
 	return nil
 }
