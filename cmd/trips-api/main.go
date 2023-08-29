@@ -79,21 +79,21 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to start Bunldr uploader")
 		}
 
-		consume := consumer.New(esStore, bundlrClient, pgStore, deviceClient, &logger)
+		controller := consumer.New(esStore, bundlrClient, pgStore, deviceClient, &logger)
 
 		// start completed segment consumer
 		consumer.Start(ctx, kafka.Config{
 			Brokers: strings.Split(settings.KafkaBrokers, ","),
 			Topic:   settings.TripEventTopic,
 			Group:   "completed-segment",
-		}, consume.CompletedSegment, &logger)
+		}, controller.CompletedSegment, &logger)
 
 		// start vehicle event consumer
 		consumer.Start(ctx, kafka.Config{
 			Brokers: strings.Split(settings.KafkaBrokers, ","),
 			Topic:   settings.VehicleEvent,
 			Group:   "vehicle-event",
-		}, consume.VehicleEvent, &logger)
+		}, controller.VehicleEvent, &logger)
 
 		app := fiber.New()
 		app.Get("/health", func(c *fiber.Ctx) error {

@@ -32,9 +32,19 @@ type Consumer struct {
 }
 
 type SegmentEvent struct {
-	Start    time.Time `json:"start"`
-	End      time.Time `json:"end"`
+	Start    PointTime `json:"start"`
+	End      PointTime `json:"end"`
 	DeviceID string    `json:"deviceID"`
+}
+
+type Point struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
+type PointTime struct {
+	Point Point     `json:"point"`
+	Time  time.Time `json:"time"`
 }
 
 type VehicleNodeMinted struct {
@@ -46,16 +56,15 @@ func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, d
 	return &Consumer{logger, es, pg, bundlrClient, devicesGRPC}
 }
 
-func Start(ctx context.Context, config kafka.Config, handler func(context.Context, any) error, logger *zerolog.Logger) {
+func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, *shared.CloudEvent[A]) error, logger *zerolog.Logger) {
 	if err := kafka.Consume(ctx, config, handler, logger); err != nil {
-		logger.Fatal().Err(err).Msg("Couldn't start segment consumer.")
+		logger.Fatal().Err(err).Msgf("Couldn't start %s consumer.", config.Group)
 	}
-	logger.Info().Msg("segment consumer started.")
+	logger.Info().Msgf("%s consumer started.", config.Group)
 }
 
-func (c *Consumer) CompletedSegment(ctx context.Context, e any) error {
-	event := e.(*shared.CloudEvent[SegmentEvent])
-	response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start, event.Data.End)
+func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEvent[SegmentEvent]) error {
+	response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start.Time, event.Data.End.Time)
 	if err != nil {
 		return err
 	}
@@ -65,7 +74,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, e any) error {
 		return err
 	}
 
-	dataItem, nonce, err := c.bundlr.PrepareData(response, v.EncryptionKey, v.UserDeviceID, event.Data.Start, event.Data.End)
+	dataItem, nonce, err := c.bundlr.PrepareData(response, v.EncryptionKey, v.UserDeviceID, event.Data.Start.Time, event.Data.End.Time)
 	if err != nil {
 		return err
 	}
@@ -73,8 +82,8 @@ func (c *Consumer) CompletedSegment(ctx context.Context, e any) error {
 	segment := models.Trip{
 		VehicleTokenID: types.NullDecimal(v.TokenID),
 		ID:             event.Data.DeviceID,
-		Start:          event.Data.Start,
-		End:            null.TimeFrom(event.Data.End),
+		Start:          event.Data.Start.Time,
+		End:            null.TimeFrom(event.Data.End.Time),
 		Nonce:          nonce,
 		BundlrID:       null.StringFrom(dataItem.Id.Base64()),
 	}
@@ -97,7 +106,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, e any) error {
 	return nil
 }
 
-func (c *Consumer) VehicleEvent(ctx context.Context, e any) error {
+func (c *Consumer) VehicleEvent(ctx context.Context, e *shared.CloudEvent[VehicleNodeMinted]) error {
 	// event := e.(*shared.CloudEvent[VehicleNodeMinted])
 
 	// populate vehicles table: token_id, user_device_id, encryption_key
