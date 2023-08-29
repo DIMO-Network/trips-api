@@ -3,25 +3,22 @@ package es
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
+	"time"
 
 	"github.com/DIMO-Network/trips-api/internal/config"
-	"github.com/elastic/go-elasticsearch/v7"
-	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
+	"github.com/elastic/go-elasticsearch/v8"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/some"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
 )
 
-const elasticSearchMaxSize = 10000
-
-type Store struct {
-	Client *elasticsearch.Client
-	Index  string
+type Client struct {
+	typedClient  *elasticsearch.TypedClient
+	indexPattern string
 }
 
-func New(settings *config.Settings) (*Store, error) {
-	es, err := elasticsearch.NewClient(elasticsearch.Config{
+func New(settings *config.Settings) (*Client, error) {
+	es, err := elasticsearch.NewTypedClient(elasticsearch.Config{
 		Addresses: []string{settings.ElasticHost},
 		Username:  settings.ElasticUsername,
 		Password:  settings.ElasticPassword,
@@ -29,100 +26,64 @@ func New(settings *config.Settings) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Store{Client: es, Index: settings.ElasticIndex}, nil
+
+	return &Client{typedClient: es, indexPattern: settings.ElasticIndex}, nil
 }
 
-func (s *Store) FetchData(deviceID, start, end string) ([]byte, error) {
-	var searchAfter int64
-	query := QueryTrip{
-		Sort: []map[string]string{
-			{"data.timestamp": "asc"},
-		},
-		Query: map[string]any{
-			"bool": map[string]any{
-				"filter": []map[string]any{
+const pageSize = 100
+
+func (s *Client) FetchData(ctx context.Context, userDeviceID string, start, end time.Time) ([]byte, error) {
+	var buf bytes.Buffer
+
+	buf.WriteByte('[')
+
+	req := &search.Request{
+		Query: &types.Query{
+			Bool: &types.BoolQuery{
+				Filter: []types.Query{
 					{
-						"range": map[string]any{
-							"data.timestamp": map[string]interface{}{
-								"format": "strict_date_optional_time",
-								"gte":    start,
-								"lte":    end,
+						Term: map[string]types.TermQuery{
+							"subject": {Value: userDeviceID},
+						},
+					},
+					{
+						Range: map[string]types.RangeQuery{
+							"data.timestamp": types.DateRangeQuery{
+								Gte: some.String(start.Format(time.RFC3339)),
+								Lte: some.String(end.Format(time.RFC3339)),
 							},
 						},
 					},
 				},
-				"must": map[string]any{
-					"match": map[string]string{
-						"subject": deviceID,
-					},
-				},
 			},
 		},
-		Size: elasticSearchMaxSize,
+		Size: some.Int(pageSize),
 	}
 
-	response, err := s.executeESQuery(query)
-	if err != nil {
-		return []byte{}, err
-	}
+	needComma := false
 
-	n := gjson.GetBytes(response, "hits.hits.#").Int()
-	searchAfter = gjson.GetBytes(response, fmt.Sprintf("hits.hits.%d.sort.0", n-1)).Int()
-
-	for searchAfter > 0 {
-		query.SearchAfter = []int64{searchAfter}
-		resp, err := s.executeESQuery(query)
+	for {
+		resp, err := s.typedClient.Search().Request(req).Do(ctx)
 		if err != nil {
-			return []byte{}, err
+			return nil, err
 		}
 
-		n = gjson.GetBytes(resp, "hits.hits.#").Int()
-		searchAfter = gjson.GetBytes(resp, fmt.Sprintf("hits.hits.%d.sort.0", n-1)).Int()
+		hitCount := len(resp.Hits.Hits)
+		if hitCount == 0 {
+			break
+		}
 
-		for i := 0; int64(i) < n; i++ {
-			response, err = sjson.SetBytes(response, "hits.hits.-1", gjson.GetBytes(resp, fmt.Sprintf("hits.hits.%d", i)).String())
-			if err != nil {
-				return []byte{}, err
+		for _, h := range resp.Hits.Hits {
+			if needComma {
+				buf.WriteByte(',')
+			} else {
+				needComma = true
 			}
+			buf.Write(h.Source_)
 		}
+
+		req.SearchAfter = resp.Hits.Hits[hitCount-1].Sort
 	}
 
-	return response, nil
-}
-
-func (s *Store) executeESQuery(query any) ([]byte, error) {
-	var buf bytes.Buffer
-	if err := json.NewEncoder(&buf).Encode(query); err != nil {
-		return []byte{}, err
-	}
-
-	res, err := s.Client.Search(
-		s.Client.Search.WithContext(context.Background()),
-		s.Client.Search.WithIndex(s.Index),
-		s.Client.Search.WithBody(&buf),
-	)
-	if err != nil {
-		return []byte{}, err
-	}
-	defer res.Body.Close()
-
-	responseBytes, err := io.ReadAll(res.Body)
-	if err != nil {
-		return responseBytes, err
-	}
-
-	if res.StatusCode >= 400 {
-		err := fmt.Errorf("invalid status code when querying elastic: %d", res.StatusCode)
-		return responseBytes, err
-	}
-
-	return responseBytes, nil
-}
-
-type QueryTrip struct {
-	Sort        []map[string]string `json:"sort"`
-	Source      []string            `json:"_source,omitempty"`
-	Size        int                 `json:"size"`
-	Query       map[string]any      `json:"query"`
-	SearchAfter []int64             `json:"search_after,omitempty"`
+	return buf.Bytes(), nil
 }

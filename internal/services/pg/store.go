@@ -2,21 +2,22 @@ package pg
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"errors"
 	"fmt"
 
+	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/ericlagergren/decimal"
-	"github.com/tidwall/gjson"
-	"github.com/uber/h3-go/v3"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
 // Store connected to postgres db containing trip information and validates user
 type Store struct {
-	db                 *sql.DB
+	DB                 *sql.DB
 	DevicesAPIGRPCAddr string
 }
 
@@ -36,32 +37,48 @@ func New(settings *config.Settings) (*Store, error) {
 	}
 
 	return &Store{
-		db:                 db,
+		DB:                 db,
 		DevicesAPIGRPCAddr: settings.DevicesAPIGRPCAddr,
 	}, nil
 }
 
-func (s *Store) StoreSegmentMetadata(ctx context.Context, vehicleTokenId uint64, encryptionKey []byte, response []byte, bundlrID string) error {
-	n := gjson.GetBytes(response, "hits.hits.#").Int()
-	startLat := gjson.GetBytes(response, "hits.hits.0._source.data.latitude").Float()
-	startLon := gjson.GetBytes(response, "hits.hits.0._source.data.longitude").Float()
-	startTime := gjson.GetBytes(response, "hits.hits.0._source.data.timestamp").Time()
-	endLat := gjson.GetBytes(response, fmt.Sprintf("hits.hits.%d._source.data.latitude", n-1)).Float()
-	endLon := gjson.GetBytes(response, fmt.Sprintf("hits.hits.%d._source.data.longitude", n-1)).Float()
-	endTime := gjson.GetBytes(response, fmt.Sprintf("hits.hits.%d._source.data.timestamp", n-1)).Time()
+func (s Store) GetOrGenerateEncryptionKey(ctx context.Context, deviceID string, grpc pb_devices.UserDeviceServiceClient) (*models.Vehicle, error) {
+	vehicle, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(deviceID)).One(ctx, s.DB)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			userDevice, err := grpc.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{
+				Id: deviceID,
+			})
+			if err != nil {
+				return nil, err
+			}
 
-	startHex := h3.FromGeo(h3.GeoCoord{Latitude: startLat, Longitude: startLon}, 6)
-	endHex := h3.FromGeo(h3.GeoCoord{Latitude: endLat, Longitude: endLon}, 6)
+			return s.GenerateKey(ctx, deviceID, *userDevice.TokenId, grpc)
+		}
+		return nil, err
+	}
+	return vehicle, err
+}
 
-	trp := models.Trip{
-		VehicleTokenID: types.NewDecimal(decimal.New(int64(vehicleTokenId), 0)),
-		Start:          startTime,
-		StartHex:       int64(startHex),
-		End:            endTime,
-		EndHex:         int64(endHex),
-		BunldrID:       bundlrID,
-		EncryptionKey:  encryptionKey,
+func (s Store) GenerateKey(ctx context.Context, deviceID string, tokenID uint64, grpc pb_devices.UserDeviceServiceClient) (*models.Vehicle, error) {
+	encryptionKey := make([]byte, 32)
+	if _, err := rand.Read(encryptionKey); err != nil {
+		return nil, err
 	}
 
-	return trp.Insert(ctx, s.db, boil.Infer())
+	v := models.Vehicle{
+		TokenID:       types.NewDecimal(new(decimal.Big).SetUint64(tokenID)),
+		UserDeviceID:  deviceID,
+		EncryptionKey: encryptionKey,
+	}
+	if err := v.Upsert(ctx, s.DB,
+		true,
+		[]string{models.VehicleColumns.TokenID},
+		boil.Whitelist(models.VehicleColumns.UserDeviceID, models.VehicleColumns.TokenID, models.VehicleColumns.EncryptionKey),
+		boil.Whitelist(models.VehicleColumns.UserDeviceID, models.VehicleColumns.TokenID, models.VehicleColumns.EncryptionKey),
+	); err != nil {
+		return nil, err
+	}
+	return &v, nil
+
 }
