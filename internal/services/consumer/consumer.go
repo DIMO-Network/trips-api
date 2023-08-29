@@ -12,7 +12,6 @@ import (
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/null/v8"
@@ -44,10 +43,15 @@ type PointTime struct {
 	Time  time.Time `json:"time"`
 }
 
-type VehicleNodeMinted struct {
-	ManufacturerId           *big.Int
-	TokenId                  *big.Int
-	AftermarketDeviceAddress common.Address
+type UserDeviceMintEvent struct {
+	Timestamp time.Time `json:"timestamp"`
+	UserID    string    `json:"userId"`
+	Device    struct {
+		ID string `json:"id"`
+	} `json:"device"`
+	NFT struct {
+		TokenID *big.Int `json:"tokenId"`
+	} `json:"nft"`
 }
 
 func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, devicesGRPC pb_devices.UserDeviceServiceClient, logger *zerolog.Logger) *Consumer {
@@ -105,15 +109,11 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEven
 	return nil
 }
 
-func (c *Consumer) VehicleEvent(ctx context.Context, event *shared.CloudEvent[VehicleNodeMinted]) error {
-	userDevice, err := c.grpc.GetUserDeviceByTokenId(ctx, &pb_devices.GetUserDeviceByTokenIdRequest{
-		TokenId: event.Data.TokenId.Int64(),
-	})
-	if err != nil {
-		return err
-	}
+func (c *Consumer) VehicleEvent(ctx context.Context, event *shared.CloudEvent[UserDeviceMintEvent]) error {
+	c.logger.Info().Str("device", event.Data.Device.ID).Msg("vehicle node minted event recieved")
 
-	if _, err := c.pg.GenerateKey(ctx, userDevice.Id, *userDevice.TokenId, c.grpc); err != nil {
+	if _, err := c.pg.GenerateKey(ctx, event.Data.Device.ID, event.Data.NFT.TokenID.Uint64(), c.grpc); err != nil {
+		c.logger.Err(err).Str("device", event.Data.Device.ID).Msg("encryption key generation failed")
 		return err
 	}
 	return nil
