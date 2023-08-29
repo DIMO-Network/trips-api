@@ -2,9 +2,6 @@ package consumer
 
 import (
 	"context"
-	"crypto/rand"
-	"database/sql"
-	"errors"
 	"math/big"
 	"time"
 
@@ -15,9 +12,9 @@ import (
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
-	"github.com/ericlagergren/decimal"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
+	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types"
@@ -69,19 +66,20 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEven
 		return err
 	}
 
-	v, err := getVehicleData(ctx, c.pg.DB, c.grpc, event.Data.DeviceID)
+	vehicleData, err := c.pg.GetOrGenerateEncryptionKey(ctx, event.Data.DeviceID, c.grpc)
 	if err != nil {
 		return err
 	}
 
-	dataItem, nonce, err := c.bundlr.PrepareData(response, v.EncryptionKey, v.UserDeviceID, event.Data.Start.Time, event.Data.End.Time)
+	dataItem, nonce, err := c.bundlr.PrepareData(response, vehicleData.EncryptionKey, vehicleData.UserDeviceID, event.Data.Start.Time, event.Data.End.Time)
 	if err != nil {
 		return err
 	}
 
 	segment := models.Trip{
-		VehicleTokenID: types.NullDecimal(v.TokenID),
-		ID:             event.Data.DeviceID,
+		VehicleTokenID: types.NullDecimal(vehicleData.TokenID),
+		UserDeviceID:   event.Data.DeviceID,
+		ID:             ksuid.New().String(),
 		Start:          event.Data.Start.Time,
 		End:            null.TimeFrom(event.Data.End.Time),
 		Nonce:          nonce,
@@ -112,35 +110,4 @@ func (c *Consumer) VehicleEvent(ctx context.Context, e *shared.CloudEvent[Vehicl
 	// populate vehicles table: token_id, user_device_id, encryption_key
 	// look at devices-api
 	return nil
-}
-
-func getVehicleData(ctx context.Context, db *sql.DB, grpc pb_devices.UserDeviceServiceClient, deviceID string) (*models.Vehicle, error) {
-	v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(deviceID)).One(ctx, db)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			userDevice, err := grpc.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{
-				Id: deviceID,
-			})
-			if err != nil {
-				return nil, err
-			}
-
-			encryptionKey := make([]byte, 32)
-			if _, err := rand.Read(encryptionKey); err != nil {
-				return nil, err
-			}
-
-			v := models.Vehicle{
-				TokenID:       types.NewDecimal(new(decimal.Big).SetUint64(*userDevice.TokenId)),
-				UserDeviceID:  deviceID,
-				EncryptionKey: encryptionKey,
-			}
-			if err := v.Insert(ctx, db, boil.Whitelist(models.VehicleColumns.UserDeviceID, models.VehicleColumns.TokenID, models.VehicleColumns.EncryptionKey)); err != nil {
-				return nil, err
-			}
-			return &v, nil
-		}
-		return nil, err
-	}
-	return v, err
 }

@@ -13,8 +13,8 @@ ALTER TABLE trips ALTER COLUMN "start" SET NOT NULL;
 
 -- +goose Down
 -- +goose StatementBegin
-ALTER TABLE trips ALTER COLUMN user_device_id SET NULL;
-ALTER TABLE trips ALTER COLUMN "start" SET NULL;  
+ALTER TABLE trips ALTER COLUMN user_device_id DROP NOT NULL;
+ALTER TABLE trips ALTER COLUMN "start" DROP NOT NULL;  
 
 ALTER TABLE trips RENAME COLUMN id TO trip_id;
 ALTER TABLE trips RENAME COLUMN user_device_id TO device_id;
