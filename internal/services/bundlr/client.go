@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"time"
 
 	"github.com/DIMO-Network/trips-api/internal/config"
@@ -74,7 +75,8 @@ func (c *Client) compress(data []byte, fileName string) ([]byte, error) {
 		return nil, err
 	}
 
-	return buf.Bytes(), w.Close()
+	err = w.Close()
+	return buf.Bytes(), err
 }
 
 func (c *Client) encrypt(data, key []byte) ([]byte, []byte, error) {
@@ -94,4 +96,44 @@ func (c *Client) encrypt(data, key []byte) ([]byte, []byte, error) {
 	}
 
 	return aesgcm.Seal(nil, nonce, data, nil), nonce, nil
+}
+
+func (c *Client) decrypt(data, key, nonce []byte) ([]byte, error) {
+	aes, err := aes.NewCipher(key)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	aesgcm, err := cipher.NewGCM(aes)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	return aesgcm.Open(nil, nonce, data, nil)
+}
+
+func (c *Client) decompress(decryptedBody []byte) ([]string, error) {
+	unzippedResp := make([]string, 0)
+
+	zipReader, err := zip.NewReader(bytes.NewReader(decryptedBody), int64(len(decryptedBody)))
+	if err != nil {
+		return unzippedResp, err
+	}
+
+	for _, zipFile := range zipReader.File {
+		f, err := zipFile.Open()
+		if err != nil {
+			return unzippedResp, err
+		}
+		defer f.Close()
+
+		unzippedBytes, err := io.ReadAll(f)
+		if err != nil {
+			return unzippedResp, err
+		}
+
+		unzippedResp = append(unzippedResp, string(unzippedBytes))
+	}
+
+	return unzippedResp, nil
 }
