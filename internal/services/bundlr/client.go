@@ -111,7 +111,8 @@ func (c *Client) compress(data []byte, fileName string) ([]byte, error) {
 		return nil, err
 	}
 
-	return buf.Bytes(), w.Close()
+	err = w.Close()
+	return buf.Bytes(), err
 }
 
 func (c *Client) encrypt(data, key []byte) ([]byte, []byte, error) {
