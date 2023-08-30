@@ -61,7 +61,7 @@ func (s *Client) FetchData(ctx context.Context, userDeviceID string, start, end 
 		Size: some.Int(pageSize),
 		Sort: []types.SortCombinations{
 			types.SortOptions{SortOptions: map[string]types.FieldSort{
-				"data.timestamp": {Order: &sortorder.Asc},
+				"time": {Order: &sortorder.Asc},
 			}},
 		},
 	}
