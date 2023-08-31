@@ -5,13 +5,17 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/shared"
+	"github.com/DIMO-Network/shared/kafka"
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/config"
+
+	"github.com/DIMO-Network/trips-api/internal/database"
 	"github.com/DIMO-Network/trips-api/internal/handlers/pg_handler"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	"github.com/DIMO-Network/trips-api/internal/services/consumer"
@@ -30,14 +34,10 @@ import (
 
 const userIDContextKey = "userID"
 
-// var tripStatusCodec = &shared.JSONCodec[kafka.TripStatus]{}
-
 // @title                      DIMO Segment API
 // @version                    1.0
 // @description segments
-
 // @BasePath /
-
 // @name Authorization
 func main() {
 	ctx := context.Background()
@@ -61,7 +61,7 @@ func main() {
 				command = command + " " + os.Args[3]
 			}
 		}
-		MigrateDatabase(logger, &settings, command, "trips_api")
+		database.MigrateDatabase(logger, &settings, command, "trips_api")
 	default:
 		conn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
@@ -86,12 +86,21 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to initialize Bunldr client")
 		}
 
-		consumer, err := consumer.New(esStore, bundlrClient, pgStore, deviceClient, &settings, &logger)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create consumer.")
-		}
+		controller := consumer.New(esStore, bundlrClient, pgStore, deviceClient, &logger)
 
-		consumer.Start(ctx)
+		// start completed segment consumer
+		consumer.Start(ctx, kafka.Config{
+			Brokers: strings.Split(settings.KafkaBrokers, ","),
+			Topic:   settings.TripEventTopic,
+			Group:   "completed-segment",
+		}, controller.CompletedSegment, &logger)
+
+		// start vehicle event consumer
+		consumer.Start(ctx, kafka.Config{
+			Brokers: strings.Split(settings.KafkaBrokers, ","),
+			Topic:   settings.VehicleEvent,
+			Group:   "vehicle-event",
+		}, controller.VehicleEvent, &logger)
 
 		keyRefreshInterval := time.Hour
 		keyRefreshUnknownKID := true
@@ -123,17 +132,16 @@ func main() {
 		handler := pg_handler.New(pgStore, deviceClient)
 
 		app := fiber.New()
-		app.Get("/swagger/*", swagger.HandlerDefault)
 		app.Use(cors.New(cors.Config{AllowOrigins: "*"}))
-
-		deviceGroup := app.Group("/devices/:id", jwtAuth)
-		deviceGroup.Get("/segments", handler.Segments)
-
+		app.Get("/swagger/*", swagger.HandlerDefault)
 		app.Get("/health", func(c *fiber.Ctx) error {
 			return c.JSON(map[string]interface{}{
 				"data": "Server is up and running",
 			})
 		})
+
+		deviceGroup := app.Group("/devices/:id", jwtAuth)
+		deviceGroup.Get("/segments", handler.Segments)
 
 		go func() {
 			logger.Info().Msgf("Starting API server on port %s.", settings.Port)

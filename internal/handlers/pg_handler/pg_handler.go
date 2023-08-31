@@ -36,16 +36,15 @@ func (h *Handler) Segments(c *fiber.Ctx) error {
 	}
 
 	allSegments, err := models.Trips(
-		models.TripWhere.VehicleTokenID.EQ(types.NewDecimal(decimal.New(int64(*userDevice.TokenId), 0))),
+		models.TripWhere.VehicleTokenID.EQ(types.NewNullDecimal(decimal.New(int64(*userDevice.TokenId), 0))),
 		qm.Select(
 			models.TripColumns.VehicleTokenID,
 			models.TripColumns.Start,
-			models.TripColumns.StartHex,
-			models.TripColumns.StartPosition,
 			models.TripColumns.End,
-			models.TripColumns.EndHex,
-			models.TripColumns.EndPosition),
-	).All(c.Context(), h.Db)
+			models.TripColumns.StartPosition,
+			models.TripColumns.EndPosition,
+		),
+	).All(c.Context(), h.DB)
 	if err != nil {
 		return err
 	}

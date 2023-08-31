@@ -21,6 +21,7 @@ type Settings struct {
 	EthereumSignerPrivateKey string `yaml:"ETHEREUM_SIGNER_PRIVATE_KEY"`
 	BundlrNetwork            string `yaml:"BUNDLR_NETWORK"`
 	BundlrCurrency           string `yaml:"BUNDLR_CURRENCY"`
+	VehicleEvent             string `yaml:"VEHICLE_EVENT_TOPIC"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader
