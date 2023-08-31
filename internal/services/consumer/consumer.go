@@ -28,20 +28,10 @@ type Consumer struct {
 	grpc   pb_devices.UserDeviceServiceClient
 }
 
-type Point struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
-type PointTime struct {
-	Point Point     `json:"point"`
-	Time  time.Time `json:"time"`
-}
-
 type SegmentEvent struct {
-	Start    PointTime `json:"start"`
-	End      PointTime `json:"end"`
-	DeviceID string    `json:"deviceID"`
+	Start    bundlr.PointTime `json:"start"`
+	End      bundlr.PointTime `json:"end"`
+	DeviceID string           `json:"deviceID"`
 }
 
 type UserDeviceMintEvent struct {
@@ -79,7 +69,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEven
 		return err
 	}
 
-	dataItem, nonce, err := c.bundlr.PrepareData(response, vehicleData.EncryptionKey, vehicleData.UserDeviceID, event.Data.Start.Time, event.Data.End.Time)
+	dataItem, nonce, err := c.bundlr.PrepareData(response, vehicleData.EncryptionKey, vehicleData.UserDeviceID, event.Data.Start, event.Data.End)
 	if err != nil {
 		return err
 	}
@@ -105,7 +95,9 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEven
 			models.TripColumns.Nonce,
 			models.TripColumns.BundlrID,
 			models.TripColumns.Start,
-			models.TripColumns.End)); err != nil {
+			models.TripColumns.End,
+			models.TripColumns.StartPosition,
+			models.TripColumns.EndPosition)); err != nil {
 		return err
 	}
 

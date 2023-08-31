@@ -1,23 +1,20 @@
 package pg_handler
 
 import (
-	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
+	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
-	"github.com/ericlagergren/decimal"
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
-	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
 type Handler struct {
-	*pg_store.Store
-	grpc pb_devices.UserDeviceServiceClient
+	pg     *pg_store.Store
+	bundlr *bundlr.Client
 }
 
-func New(pgStore *pg_store.Store, grpcDevices pb_devices.UserDeviceServiceClient) *Handler {
-	return &Handler{pgStore, grpcDevices}
+func New(pgStore *pg_store.Store, bundlrClient *bundlr.Client) *Handler {
+	return &Handler{pgStore, bundlrClient}
 }
 
 // Segments godoc
@@ -28,25 +25,12 @@ func New(pgStore *pg_store.Store, grpcDevices pb_devices.UserDeviceServiceClient
 // @Router      /devices/:id/segments [get]
 func (h *Handler) Segments(c *fiber.Ctx) error {
 	deviceID := c.Params("id")
-	userDevice, err := h.grpc.GetUserDevice(c.Context(), &pb_devices.GetUserDeviceRequest{
-		Id: deviceID,
-	})
-	if err != nil {
-		return err
-	}
 
 	allSegments, err := models.Trips(
-		models.TripWhere.VehicleTokenID.EQ(types.NewNullDecimal(decimal.New(int64(*userDevice.TokenId), 0))),
-		qm.Select(
-			models.TripColumns.VehicleTokenID,
-			models.TripColumns.Start,
-			models.TripColumns.End,
-			models.TripColumns.StartPosition,
-			models.TripColumns.EndPosition,
-		),
-	).All(c.Context(), h.DB)
+		models.TripWhere.UserDeviceID.EQ(deviceID),
+	).All(c.Context(), h.pg.DB)
 	if err != nil {
-		return err
+		return c.JSON(err)
 	}
 
 	return c.JSON(allSegments)

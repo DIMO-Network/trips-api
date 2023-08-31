@@ -14,6 +14,9 @@ import (
 	"github.com/DIMO-Network/shared/kafka"
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/config"
+	"github.com/golang-jwt/jwt"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/DIMO-Network/trips-api/internal/database"
 	"github.com/DIMO-Network/trips-api/internal/handlers/pg_handler"
@@ -25,11 +28,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/gofiber/swagger"
-	"github.com/golang-jwt/jwt"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 const userIDContextKey = "userID"
@@ -112,7 +112,6 @@ func main() {
 				SuccessHandler: func(c *fiber.Ctx) error {
 					token := c.Locals("user").(*jwt.Token)
 					claims := token.Claims.(jwt.MapClaims)
-					fmt.Println(claims)
 					c.Locals(userIDContextKey, claims["sub"].(string))
 					return c.Next()
 				},
@@ -129,7 +128,7 @@ func main() {
 
 		logger.Info().Interface("settings", settings).Msg("Settings")
 
-		handler := pg_handler.New(pgStore, deviceClient)
+		handler := pg_handler.New(pgStore, bundlrClient)
 
 		app := fiber.New()
 		app.Use(cors.New(cors.Config{AllowOrigins: "*"}))

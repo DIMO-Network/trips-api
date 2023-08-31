@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/trips-api/internal/config"
+	"github.com/uber/h3-go"
 	"github.com/warp-contracts/syncer/src/utils/arweave"
 	"github.com/warp-contracts/syncer/src/utils/bundlr"
 )
@@ -24,6 +25,16 @@ type Client struct {
 	url         string
 	contentType string
 	currency    string
+}
+
+type Point struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
+type PointTime struct {
+	Point Point     `json:"point"`
+	Time  time.Time `json:"time"`
 }
 
 func New(settings *config.Settings) (*Client, error) {
@@ -41,8 +52,8 @@ func New(settings *config.Settings) (*Client, error) {
 }
 
 // PrepareData prepares data for uploading to bundlr by compressing and encrypting input.
-func (c *Client) PrepareData(data []byte, encryptionKey []byte, userDeviceID string, start, end time.Time) (bundlr.BundleItem, []byte, error) {
-	fileName := fmt.Sprintf("%s-%d-%d.zip", userDeviceID, start.Unix(), end.Unix())
+func (c *Client) PrepareData(data []byte, encryptionKey []byte, userDeviceID string, start, end PointTime) (bundlr.BundleItem, []byte, error) {
+	fileName := fmt.Sprintf("%s-%d-%d.zip", userDeviceID, start.Time.Unix(), end.Time.Unix())
 	compressedData, err := c.compress(data, fileName)
 	if err != nil {
 		return bundlr.BundleItem{}, []byte{}, err
@@ -57,8 +68,10 @@ func (c *Client) PrepareData(data []byte, encryptionKey []byte, userDeviceID str
 		Data: arweave.Base64String(encryptedData),
 		Tags: bundlr.Tags{
 			bundlr.Tag{Name: "Device-ID", Value: userDeviceID},
-			bundlr.Tag{Name: "Start-Time", Value: start.Format(time.RFC3339)},
-			bundlr.Tag{Name: "End-Time", Value: end.Format(time.RFC3339)},
+			bundlr.Tag{Name: "Start-Time", Value: start.Time.Format(time.RFC3339)},
+			bundlr.Tag{Name: "End-Time", Value: end.Time.Format(time.RFC3339)},
+			bundlr.Tag{Name: "StartHex", Value: fmt.Sprintf("%+v", h3.FromGeo(h3.GeoCoord{Latitude: start.Point.Latitude, Longitude: start.Point.Longitude}, 6))},
+			bundlr.Tag{Name: "EndHex", Value: fmt.Sprintf("%+v", h3.FromGeo(h3.GeoCoord{Latitude: end.Point.Latitude, Longitude: end.Point.Longitude}, 6))},
 			bundlr.Tag{Name: "Nonce", Value: hex.EncodeToString(nonce)},
 		},
 	}
@@ -96,6 +109,25 @@ func (c *Client) Upload(dataItem bundlr.BundleItem) error {
 	}
 
 	return nil
+}
+
+func (c *Client) Download(bundlrID string, key, nonce []byte) ([]string, error) {
+	resp, err := http.Get(c.url + bundlrID)
+	if err != nil {
+		return []string{}, err
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return []string{}, err
+	}
+
+	decryptedData, err := c.decrypt(data, key, nonce)
+	if err != nil {
+		return []string{}, err
+	}
+
+	return c.decompress(decryptedData)
 }
 
 func (c *Client) compress(data []byte, fileName string) ([]byte, error) {

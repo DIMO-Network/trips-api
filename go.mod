@@ -13,6 +13,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/stretchr/testify v1.8.4
 	github.com/swaggo/swag v1.16.1
+	github.com/uber/h3-go v3.0.1+incompatible
 	github.com/volatiletech/strmangle v0.0.5
 	github.com/warp-contracts/syncer v0.2.24
 	google.golang.org/grpc v1.57.0
