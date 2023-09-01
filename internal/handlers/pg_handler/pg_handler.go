@@ -5,7 +5,6 @@ import (
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt"
 )
 
 type Handler struct {
@@ -34,11 +33,4 @@ func (h *Handler) Segments(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(allSegments)
-}
-
-func getUserID(c *fiber.Ctx) string {
-	token := c.Locals("user").(*jwt.Token)
-	claims := token.Claims.(jwt.MapClaims)
-	userID := claims["sub"].(string)
-	return userID
 }
