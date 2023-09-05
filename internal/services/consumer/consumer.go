@@ -2,6 +2,7 @@ package consumer
 
 import (
 	"context"
+	"crypto/rand"
 	"math/big"
 	"time"
 
@@ -16,7 +17,6 @@ import (
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
 type Consumer struct {
@@ -68,28 +68,33 @@ func Start[A any](ctx context.Context, config kafka.Config, handler func(context
 }
 
 func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEvent[SegmentEvent]) error {
+	v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB)
+	if err != nil {
+		return err
+	}
+
 	response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start.Time, event.Data.End.Time)
 	if err != nil {
 		return err
 	}
 
-	vehicleData, err := c.pg.GetOrGenerateEncryptionKey(ctx, event.Data.DeviceID, c.grpc)
-	if err != nil {
+	encryptionKey := make([]byte, 32)
+	if _, err := rand.Read(encryptionKey); err != nil {
 		return err
 	}
 
-	dataItem, nonce, err := c.bundlr.PrepareData(response, vehicleData.EncryptionKey, vehicleData.UserDeviceID, event.Data.Start.Time, event.Data.End.Time)
+	dataItem, err := c.bundlr.PrepareData(response, encryptionKey, v.TokenID, event.Data.Start.Time, event.Data.End.Time)
 	if err != nil {
 		return err
 	}
 
 	segment := models.Trip{
-		VehicleTokenID: types.NullDecimal(vehicleData.TokenID),
+		VehicleTokenID: v.TokenID,
+		EncryptionKey:  null.BytesFrom(encryptionKey),
 		UserDeviceID:   event.Data.DeviceID,
 		ID:             ksuid.New().String(),
 		Start:          event.Data.Start.Time,
 		End:            null.TimeFrom(event.Data.End.Time),
-		Nonce:          nonce,
 		BundlrID:       null.StringFrom(dataItem.Id.Base64()),
 	}
 	if err := segment.Insert(
@@ -106,11 +111,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEven
 
 func (c *Consumer) VehicleEvent(ctx context.Context, event *shared.CloudEvent[UserDeviceMintEvent]) error {
 	if event.Type == UserDeviceMintEventType {
-		c.logger.Info().Str("device", event.Data.Device.ID).Msg("vehicle node minted event recieved")
-		if _, err := c.pg.GenerateKey(ctx, event.Data.Device.ID, event.Data.NFT.TokenID.Uint64(), c.grpc); err != nil {
-			c.logger.Err(err).Str("device", event.Data.Device.ID).Msg("encryption key generation failed")
-			return err
-		}
+		return c.pg.StoreVehicle(ctx, event.Data.Device.ID, int(event.Data.NFT.TokenID.Int64()))
 	}
 	return nil
 }
