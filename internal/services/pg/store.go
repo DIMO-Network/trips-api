@@ -53,6 +53,10 @@ func (s Store) GetOrGenerateEncryptionKey(ctx context.Context, deviceID string, 
 				return nil, err
 			}
 
+			if userDevice.TokenId == nil {
+				return nil, fmt.Errorf("device %s not minted", deviceID)
+			}
+
 			return s.GenerateKey(ctx, deviceID, *userDevice.TokenId, grpc)
 		}
 		return nil, err

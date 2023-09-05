@@ -95,14 +95,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEven
 	if err := segment.Insert(
 		ctx,
 		c.pg.DB,
-		boil.Whitelist(
-			models.TripColumns.VehicleTokenID,
-			models.TripColumns.ID,
-			models.TripColumns.UserDeviceID,
-			models.TripColumns.Nonce,
-			models.TripColumns.BundlrID,
-			models.TripColumns.Start,
-			models.TripColumns.End)); err != nil {
+		boil.Infer()); err != nil {
 		return err
 	}
 
