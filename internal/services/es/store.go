@@ -10,6 +10,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8/typedapi/core/search"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/some"
 	"github.com/elastic/go-elasticsearch/v8/typedapi/types"
+	"github.com/elastic/go-elasticsearch/v8/typedapi/types/enums/sortorder"
 )
 
 type Client struct {
@@ -58,6 +59,11 @@ func (s *Client) FetchData(ctx context.Context, userDeviceID string, start, end 
 			},
 		},
 		Size: some.Int(pageSize),
+		Sort: []types.SortCombinations{
+			types.SortOptions{SortOptions: map[string]types.FieldSort{
+				"time": {Order: &sortorder.Asc},
+			}},
+		},
 	}
 
 	needComma := false

@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/DIMO-Network/shared"
+	"github.com/DIMO-Network/shared/kafka"
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
@@ -50,7 +52,6 @@ func main() {
 		}
 		MigrateDatabase(logger, &settings, command, "trips_api")
 	default:
-
 		esStore, err := es_store.New(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to establish connection to elasticsearch.")
@@ -66,12 +67,21 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to start Bunldr uploader")
 		}
 
-		consumer, err := consumer.New(esStore, bundlrClient, pgStore, &settings, &logger)
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to create consumer.")
-		}
+		controller := consumer.New(esStore, bundlrClient, pgStore, &logger)
 
-		consumer.Start(ctx)
+		// start completed segment consumer
+		consumer.Start(ctx, kafka.Config{
+			Brokers: strings.Split(settings.KafkaBrokers, ","),
+			Topic:   settings.TripEventTopic,
+			Group:   "completed-segment",
+		}, controller.CompletedSegment, &logger)
+
+		// start vehicle event consumer
+		consumer.Start(ctx, kafka.Config{
+			Brokers: strings.Split(settings.KafkaBrokers, ","),
+			Topic:   settings.EventTopic,
+			Group:   "vehicle-event",
+		}, controller.VehicleEvent, &logger)
 
 		app := fiber.New()
 		app.Get("/health", func(c *fiber.Ctx) error {

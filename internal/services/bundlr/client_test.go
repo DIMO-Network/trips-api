@@ -1,12 +1,14 @@
 package bundlr
 
 import (
+	"archive/zip"
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"testing"
 	"time"
 
@@ -24,45 +26,53 @@ func TestPrepareData(t *testing.T) {
 	start, _ := time.Parse(time.DateOnly, "2023-08-16")
 	end, _ := time.Parse(time.DateOnly, "2023-08-17")
 
-	uploader, err := New(&config.Settings{})
+	uploader, err := New(&config.Settings{
+		BundlrPrivateKey: "1234567890123456789123456789123456789123456789123456789123456789",
+	})
 	assert.NoError(err)
 
 	fileName := fmt.Sprintf("%s-%d-%d.zip", ksuid.New().String(), start.Unix(), end.Unix())
-
-	compressedData, err := uploader.compress(dataB, fileName)
-	assert.NoError(err)
 
 	// generating random 32 byte key for AES-256
 	key := make([]byte, 32)
 	_, err = rand.Read(key)
 	assert.NoError(err)
 
-	keyString := hex.EncodeToString(key)
-	t.Logf("Key: %s", keyString)
-
-	encryptedData, _, err := uploader.encrypt(compressedData, key)
+	// compress
+	compressedData, err := uploader.compress(dataB, fileName)
 	assert.NoError(err)
 
-	// decrypt and check to make sure
-
-	//Create a new Cipher Block from the key
-	block, err := aes.NewCipher(key)
+	// encrypt using key
+	encryptedData, nonce, err := uploader.encrypt(compressedData, key)
 	assert.NoError(err)
 
-	//Create a new GCM
-	aesGCM, err := cipher.NewGCM(block)
+	// decrypt
+	aes, err := aes.NewCipher(key)
 	assert.NoError(err)
 
-	//Get the nonce size
-	nonceSize := aesGCM.NonceSize()
-
-	//Extract the nonce from the encrypted data
-	nonce, ciphertext := encryptedData[:nonceSize], encryptedData[nonceSize:]
-
-	//Decrypt the data
-	decryptedCompressedData, err := aesGCM.Open(nil, nonce, ciphertext, nil)
+	aesgcm, err := cipher.NewGCM(aes)
 	assert.NoError(err)
 
-	assert.Equal(decryptedCompressedData, compressedData)
+	decryptedCompressedData, err := aesgcm.Open(nil, nonce, encryptedData, nil)
+	assert.NoError(err)
+
+	// decompress
+	unzippedResp := make([]string, 0)
+
+	zipReader, err := zip.NewReader(bytes.NewReader(decryptedCompressedData), int64(len(decryptedCompressedData)))
+	assert.NoError(err)
+
+	for _, zipFile := range zipReader.File {
+		f, err := zipFile.Open()
+		assert.NoError(err)
+		defer f.Close()
+
+		unzippedBytes, err := io.ReadAll(f)
+		assert.NoError(err)
+
+		unzippedResp = append(unzippedResp, string(unzippedBytes))
+	}
+
+	assert.Equal(string(dataB), unzippedResp[0])
 
 }

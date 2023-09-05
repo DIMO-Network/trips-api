@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/DIMO-Network/trips-api/internal/config"
@@ -20,7 +21,7 @@ type Client struct {
 }
 
 func New(settings *config.Settings) (*Client, error) {
-	signer, err := bundlr.NewEthereumSigner("0x" + settings.EthereumSignerPrivateKey)
+	signer, err := bundlr.NewEthereumSigner("0x" + settings.BundlrPrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -31,36 +32,29 @@ func New(settings *config.Settings) (*Client, error) {
 }
 
 // PrepareData prepares data for uploading to bundlr by compressing and encrypting input.
-func (c *Client) PrepareData(data []byte, userDeviceID string, start, end time.Time) (bundlr.BundleItem, string, error) {
-	fileName := fmt.Sprintf("%s-%d-%d.zip", userDeviceID, start.Unix(), end.Unix())
+func (c *Client) PrepareData(data []byte, encryptionKey []byte, tokenId int, start, end time.Time) (*bundlr.BundleItem, error) {
+	fileName := fmt.Sprintf("%d-%d-%d.zip", tokenId, start.Unix(), end.Unix())
 	compressedData, err := c.compress(data, fileName)
 	if err != nil {
-		return bundlr.BundleItem{}, "", err
+		return nil, err
 	}
 
-	// generating random 32 byte key for AES-256
-	bytes := make([]byte, 32)
-	if _, err := rand.Read(bytes); err != nil {
-		return bundlr.BundleItem{}, "", err
-	}
-	encryptionKey := hex.EncodeToString(bytes)
-
-	encryptedData, nonce, err := c.encrypt(compressedData, bytes)
+	encryptedData, nonce, err := c.encrypt(compressedData, encryptionKey)
 	if err != nil {
-		return bundlr.BundleItem{}, encryptionKey, err
+		return nil, err
 	}
 
-	dataItem := bundlr.BundleItem{
+	dataItem := &bundlr.BundleItem{
 		Data: arweave.Base64String(encryptedData),
 		Tags: bundlr.Tags{
-			bundlr.Tag{Name: "Device-ID", Value: userDeviceID},
+			bundlr.Tag{Name: "Vehicle-Token-Id", Value: strconv.Itoa(tokenId)},
 			bundlr.Tag{Name: "Start-Time", Value: start.Format(time.RFC3339)},
 			bundlr.Tag{Name: "End-Time", Value: end.Format(time.RFC3339)},
 			bundlr.Tag{Name: "Nonce", Value: hex.EncodeToString(nonce)},
 		},
 	}
 
-	return dataItem, encryptionKey, dataItem.Sign(c.Signer)
+	return dataItem, dataItem.Sign(c.Signer)
 }
 
 func (c *Client) Upload(dataItem bundlr.BundleItem) (string, error) {
@@ -81,7 +75,8 @@ func (c *Client) compress(data []byte, fileName string) ([]byte, error) {
 		return nil, err
 	}
 
-	return buf.Bytes(), w.Close()
+	err = w.Close()
+	return buf.Bytes(), err
 }
 
 func (c *Client) encrypt(data, key []byte) ([]byte, []byte, error) {

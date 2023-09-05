@@ -1,16 +1,18 @@
 package pg
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
 	"github.com/DIMO-Network/trips-api/internal/config"
+	"github.com/DIMO-Network/trips-api/models"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
 // Store connected to postgres db containing trip information and validates user
 type Store struct {
-	db                 *sql.DB
-	DevicesAPIGRPCAddr string
+	DB *sql.DB
 }
 
 func New(settings *config.Settings) (*Store, error) {
@@ -29,7 +31,15 @@ func New(settings *config.Settings) (*Store, error) {
 	}
 
 	return &Store{
-		db:                 db,
-		DevicesAPIGRPCAddr: settings.DevicesAPIGRPCAddr,
+		DB: db,
 	}, nil
+}
+
+func (s Store) StoreVehicle(ctx context.Context, userDeviceID string, tokenID int) error {
+	v := models.Vehicle{
+		UserDeviceID: userDeviceID,
+		TokenID:      tokenID,
+	}
+
+	return v.Insert(ctx, s.DB, boil.Infer())
 }
