@@ -101,12 +101,12 @@ func (c *Client) encrypt(data, key []byte) ([]byte, []byte, error) {
 func (c *Client) decrypt(data, key, nonce []byte) ([]byte, error) {
 	aes, err := aes.NewCipher(key)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
 	aesgcm, err := cipher.NewGCM(aes)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
 	return aesgcm.Open(nil, nonce, data, nil)
