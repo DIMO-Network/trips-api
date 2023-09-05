@@ -21,7 +21,7 @@ type Client struct {
 }
 
 func New(settings *config.Settings) (*Client, error) {
-	signer, err := bundlr.NewEthereumSigner("0x" + settings.EthereumSignerPrivateKey)
+	signer, err := bundlr.NewEthereumSigner("0x" + settings.BundlrPrivateKey)
 	if err != nil {
 		return nil, err
 	}
