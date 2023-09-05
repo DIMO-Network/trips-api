@@ -27,7 +27,7 @@ func TestPrepareData(t *testing.T) {
 	end, _ := time.Parse(time.DateOnly, "2023-08-17")
 
 	uploader, err := New(&config.Settings{
-		EthereumSignerPrivateKey: "1234567890123456789123456789123456789123456789123456789123456789",
+		BundlrPrivateKey: "1234567890123456789123456789123456789123456789123456789123456789",
 	})
 	assert.NoError(err)
 
@@ -54,6 +54,7 @@ func TestPrepareData(t *testing.T) {
 	assert.NoError(err)
 
 	decryptedCompressedData, err := aesgcm.Open(nil, nonce, encryptedData, nil)
+	assert.NoError(err)
 
 	// decompress
 	unzippedResp := make([]string, 0)

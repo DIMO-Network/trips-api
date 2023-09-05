@@ -4,23 +4,23 @@ import "fmt"
 
 // Settings credentials
 type Settings struct {
-	DBUser                   string `yaml:"DB_USER"`
-	DBPassword               string `yaml:"DB_PASSWORD"`
-	DBPort                   string `yaml:"DB_PORT"`
-	DBHost                   string `yaml:"DB_HOST"`
-	DBName                   string `yaml:"DB_NAME"`
-	KafkaBrokers             string `yaml:"KAFKA_BROKERS"`
-	JWTKeySetURL             string `yaml:"JWT_KEY_SET_URL"`
-	DevicesAPIGRPCAddr       string `yaml:"DEVICES_API_GRPC_ADDR"`
-	ElasticHost              string `yaml:"ELASTIC_HOST"`
-	ElasticUsername          string `yaml:"ELASTIC_USERNAME"`
-	ElasticPassword          string `yaml:"ELASTIC_PASSWORD"`
-	ElasticIndex             string `yaml:"ELASTIC_INDEX"`
-	Port                     string `yaml:"PORT"`
-	TripEventTopic           string `yaml:"TRIP_EVENT_TOPIC"`
-	EthereumSignerPrivateKey string `yaml:"ETHEREUM_SIGNER_PRIVATE_KEY"`
-	BundlrNetwork            string `yaml:"BUNDLR_NETWORK"`
-	VehicleEvent             string `yaml:"VEHICLE_EVENT_TOPIC"`
+	Port string `yaml:"PORT"`
+
+	DBUser     string `yaml:"DB_USER"`
+	DBPassword string `yaml:"DB_PASSWORD"`
+	DBPort     string `yaml:"DB_PORT"`
+	DBHost     string `yaml:"DB_HOST"`
+	DBName     string `yaml:"DB_NAME"`
+
+	ElasticHost     string `yaml:"ELASTIC_HOST"`
+	ElasticUsername string `yaml:"ELASTIC_USERNAME"`
+	ElasticPassword string `yaml:"ELASTIC_PASSWORD"`
+	ElasticIndex    string `yaml:"ELASTIC_INDEX"`
+
+	KafkaBrokers     string `yaml:"KAFKA_BROKERS"`
+	TripEventTopic   string `yaml:"TRIP_EVENT_TOPIC"`
+	BundlrPrivateKey string `yaml:"BUNDLR_PRIVATE_KEY"`
+	EventTopic       string `yaml:"EVENTS_TOPIC"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

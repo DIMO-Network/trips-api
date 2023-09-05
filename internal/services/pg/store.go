@@ -2,23 +2,17 @@ package pg
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"errors"
 	"fmt"
 
-	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/DIMO-Network/trips-api/models"
-	"github.com/ericlagergren/decimal"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/types"
 )
 
 // Store connected to postgres db containing trip information and validates user
 type Store struct {
-	DB                 *sql.DB
-	DevicesAPIGRPCAddr string
+	DB *sql.DB
 }
 
 func New(settings *config.Settings) (*Store, error) {
@@ -37,52 +31,15 @@ func New(settings *config.Settings) (*Store, error) {
 	}
 
 	return &Store{
-		DB:                 db,
-		DevicesAPIGRPCAddr: settings.DevicesAPIGRPCAddr,
+		DB: db,
 	}, nil
 }
 
-func (s Store) GetOrGenerateEncryptionKey(ctx context.Context, deviceID string, grpc pb_devices.UserDeviceServiceClient) (*models.Vehicle, error) {
-	vehicle, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(deviceID)).One(ctx, s.DB)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			userDevice, err := grpc.GetUserDevice(ctx, &pb_devices.GetUserDeviceRequest{
-				Id: deviceID,
-			})
-			if err != nil {
-				return nil, err
-			}
-
-			if userDevice.TokenId == nil {
-				return nil, fmt.Errorf("device %s not minted", deviceID)
-			}
-
-			return s.GenerateKey(ctx, deviceID, *userDevice.TokenId, grpc)
-		}
-		return nil, err
-	}
-	return vehicle, err
-}
-
-func (s Store) GenerateKey(ctx context.Context, deviceID string, tokenID uint64, grpc pb_devices.UserDeviceServiceClient) (*models.Vehicle, error) {
-	encryptionKey := make([]byte, 32)
-	if _, err := rand.Read(encryptionKey); err != nil {
-		return nil, err
-	}
-
+func (s Store) StoreVehicle(ctx context.Context, userDeviceID string, tokenID int) error {
 	v := models.Vehicle{
-		TokenID:       types.NewDecimal(new(decimal.Big).SetUint64(tokenID)),
-		UserDeviceID:  deviceID,
-		EncryptionKey: encryptionKey,
+		UserDeviceID: userDeviceID,
+		TokenID:      tokenID,
 	}
-	if err := v.Upsert(ctx, s.DB,
-		true,
-		[]string{models.VehicleColumns.TokenID},
-		boil.Whitelist(models.VehicleColumns.UserDeviceID, models.VehicleColumns.TokenID, models.VehicleColumns.EncryptionKey),
-		boil.Whitelist(models.VehicleColumns.UserDeviceID, models.VehicleColumns.TokenID, models.VehicleColumns.EncryptionKey),
-	); err != nil {
-		return nil, err
-	}
-	return &v, nil
 
+	return v.Insert(ctx, s.DB, boil.Infer())
 }
