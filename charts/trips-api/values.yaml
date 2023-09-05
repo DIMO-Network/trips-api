@@ -2,7 +2,7 @@ replicaCount: 1
 image:
   repository: dimozone/trips-api
   pullPolicy: IfNotPresent
-  tag: d982e9a
+  tag: 0e596e8
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
@@ -34,6 +34,7 @@ env:
   EVENTS_TOPIC: topic.event
   BUNDLR_NETWORK: https://devnet.bundlr.network/
   BUNDLR_CURRENCY: matic
+  PORT: 8080
 service:
   type: ClusterIP
   ports:
