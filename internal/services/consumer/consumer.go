@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"time"
 
-	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/kafka"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
@@ -24,7 +23,6 @@ type Consumer struct {
 	es     *es_store.Client
 	pg     *pg_store.Store
 	bundlr *bundlr.Client
-	grpc   pb_devices.UserDeviceServiceClient
 }
 
 type SegmentEvent struct {
@@ -56,8 +54,8 @@ type UserDeviceMintEvent struct {
 
 const UserDeviceMintEventType = "com.dimo.zone.device.mint"
 
-func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, devicesGRPC pb_devices.UserDeviceServiceClient, logger *zerolog.Logger) *Consumer {
-	return &Consumer{logger, es, pg, bundlrClient, devicesGRPC}
+func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, logger *zerolog.Logger) *Consumer {
+	return &Consumer{logger, es, pg, bundlrClient}
 }
 
 func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, *shared.CloudEvent[A]) error, logger *zerolog.Logger) {

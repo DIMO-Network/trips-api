@@ -12,8 +12,7 @@ import (
 
 // Store connected to postgres db containing trip information and validates user
 type Store struct {
-	DB                 *sql.DB
-	DevicesAPIGRPCAddr string
+	DB *sql.DB
 }
 
 func New(settings *config.Settings) (*Store, error) {
@@ -32,8 +31,7 @@ func New(settings *config.Settings) (*Store, error) {
 	}
 
 	return &Store{
-		DB:                 db,
-		DevicesAPIGRPCAddr: settings.DevicesAPIGRPCAddr,
+		DB: db,
 	}, nil
 }
 

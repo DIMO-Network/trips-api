@@ -11,7 +11,6 @@ type Settings struct {
 	DBName                   string `yaml:"DB_NAME"`
 	KafkaBrokers             string `yaml:"KAFKA_BROKERS"`
 	JWTKeySetURL             string `yaml:"JWT_KEY_SET_URL"`
-	DevicesAPIGRPCAddr       string `yaml:"DEVICES_API_GRPC_ADDR"`
 	ElasticHost              string `yaml:"ELASTIC_HOST"`
 	ElasticUsername          string `yaml:"ELASTIC_USERNAME"`
 	ElasticPassword          string `yaml:"ELASTIC_PASSWORD"`
@@ -20,7 +19,7 @@ type Settings struct {
 	TripEventTopic           string `yaml:"TRIP_EVENT_TOPIC"`
 	EthereumSignerPrivateKey string `yaml:"ETHEREUM_SIGNER_PRIVATE_KEY"`
 	BundlrNetwork            string `yaml:"BUNDLR_NETWORK"`
-	VehicleEvent             string `yaml:"VEHICLE_EVENT_TOPIC"`
+	EventTopic               string `yaml:"EVENTS_TOPIC"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader
