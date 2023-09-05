@@ -64,7 +64,7 @@ func main() {
 
 		bundlrClient, err := bundlr.New(&settings)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to initialize Bunldr client")
+			logger.Fatal().Err(err).Msg("Failed to initialize Bundlr client")
 		}
 
 		controller := consumer.New(esStore, bundlrClient, pgStore, &logger)
