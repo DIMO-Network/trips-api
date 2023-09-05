@@ -91,7 +91,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEven
 		return err
 	}
 
-	err = c.bundlr.Upload(*dataItem)
+	err = c.bundlr.Upload(dataItem)
 	if err != nil {
 		return err
 	}
