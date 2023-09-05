@@ -25,7 +25,6 @@ import (
 // Trip is an object representing the database table.
 type Trip struct {
 	ID             string      `boil:"id" json:"id" toml:"id" yaml:"id"`
-	UserDeviceID   string      `boil:"user_device_id" json:"user_device_id" toml:"user_device_id" yaml:"user_device_id"`
 	Start          time.Time   `boil:"start" json:"start" toml:"start" yaml:"start"`
 	End            null.Time   `boil:"end" json:"end,omitempty" toml:"end" yaml:"end,omitempty"`
 	VehicleTokenID int         `boil:"vehicle_token_id" json:"vehicle_token_id" toml:"vehicle_token_id" yaml:"vehicle_token_id"`
@@ -38,7 +37,6 @@ type Trip struct {
 
 var TripColumns = struct {
 	ID             string
-	UserDeviceID   string
 	Start          string
 	End            string
 	VehicleTokenID string
@@ -46,7 +44,6 @@ var TripColumns = struct {
 	BundlrID       string
 }{
 	ID:             "id",
-	UserDeviceID:   "user_device_id",
 	Start:          "start",
 	End:            "end",
 	VehicleTokenID: "vehicle_token_id",
@@ -56,7 +53,6 @@ var TripColumns = struct {
 
 var TripTableColumns = struct {
 	ID             string
-	UserDeviceID   string
 	Start          string
 	End            string
 	VehicleTokenID string
@@ -64,7 +60,6 @@ var TripTableColumns = struct {
 	BundlrID       string
 }{
 	ID:             "trips.id",
-	UserDeviceID:   "trips.user_device_id",
 	Start:          "trips.start",
 	End:            "trips.end",
 	VehicleTokenID: "trips.vehicle_token_id",
@@ -245,7 +240,6 @@ func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereI
 
 var TripWhere = struct {
 	ID             whereHelperstring
-	UserDeviceID   whereHelperstring
 	Start          whereHelpertime_Time
 	End            whereHelpernull_Time
 	VehicleTokenID whereHelperint
@@ -253,7 +247,6 @@ var TripWhere = struct {
 	BundlrID       whereHelpernull_String
 }{
 	ID:             whereHelperstring{field: "\"trips_api\".\"trips\".\"id\""},
-	UserDeviceID:   whereHelperstring{field: "\"trips_api\".\"trips\".\"user_device_id\""},
 	Start:          whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"start\""},
 	End:            whereHelpernull_Time{field: "\"trips_api\".\"trips\".\"end\""},
 	VehicleTokenID: whereHelperint{field: "\"trips_api\".\"trips\".\"vehicle_token_id\""},
@@ -289,8 +282,8 @@ func (r *tripR) GetVehicleToken() *Vehicle {
 type tripL struct{}
 
 var (
-	tripAllColumns            = []string{"id", "user_device_id", "start", "end", "vehicle_token_id", "encryption_key", "bundlr_id"}
-	tripColumnsWithoutDefault = []string{"id", "user_device_id", "start", "vehicle_token_id"}
+	tripAllColumns            = []string{"id", "start", "end", "vehicle_token_id", "encryption_key", "bundlr_id"}
+	tripColumnsWithoutDefault = []string{"id", "start", "vehicle_token_id"}
 	tripColumnsWithDefault    = []string{"end", "encryption_key", "bundlr_id"}
 	tripPrimaryKeyColumns     = []string{"id"}
 	tripGeneratedColumns      = []string{}

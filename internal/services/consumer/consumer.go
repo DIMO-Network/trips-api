@@ -89,7 +89,6 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEven
 	segment := models.Trip{
 		VehicleTokenID: v.TokenID,
 		EncryptionKey:  null.BytesFrom(encryptionKey),
-		UserDeviceID:   event.Data.DeviceID,
 		ID:             ksuid.New().String(),
 		Start:          event.Data.Start.Time,
 		End:            null.TimeFrom(event.Data.End.Time),
