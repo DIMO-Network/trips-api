@@ -2,7 +2,7 @@ replicaCount: 1
 image:
   repository: dimozone/trips-api
   pullPolicy: IfNotPresent
-  tag: 5acfd9f
+  tag: d982e9a
 imagePullSecrets: []
 nameOverride: ''
 fullnameOverride: ''
@@ -29,8 +29,9 @@ env:
   DB_NAME: trips_api
   KAFKA_BROKERS: kafka-dev-dimo-kafka-kafka-brokers:9092
   JWT_KEY_SET_URL: https://auth.dev.dimo.zone/keys
-  DEVICES_API_GRPC_ADDR: devices-api-dev:8086
   ELASTIC_INDEX: devices-status-dev-*
+  TRIP_EVENT_TOPIC: topic.device.trip.event
+  EVENTS_TOPIC: topic.event
 service:
   type: ClusterIP
   ports:
