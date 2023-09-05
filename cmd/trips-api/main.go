@@ -9,14 +9,11 @@ import (
 	"syscall"
 	"time"
 
-	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/kafka"
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/golang-jwt/jwt"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/DIMO-Network/trips-api/internal/database"
 	"github.com/DIMO-Network/trips-api/internal/handlers/pg_handler"
@@ -63,14 +60,6 @@ func main() {
 		}
 		database.MigrateDatabase(logger, &settings, command, "trips_api")
 	default:
-		conn, err := grpc.Dial(settings.DevicesAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
-		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to establish devices grpc connection.")
-		}
-		defer conn.Close()
-
-		deviceClient := pb_devices.NewUserDeviceServiceClient(conn)
-
 		esStore, err := es_store.New(&settings)
 		if err != nil {
 			logger.Fatal().Err(err).Msg("Failed to establish connection to elasticsearch.")
@@ -86,7 +75,7 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to initialize Bunldr client")
 		}
 
-		controller := consumer.New(esStore, bundlrClient, pgStore, deviceClient, &logger)
+		controller := consumer.New(esStore, bundlrClient, pgStore, &logger)
 
 		// start completed segment consumer
 		consumer.Start(ctx, kafka.Config{
@@ -98,7 +87,7 @@ func main() {
 		// start vehicle event consumer
 		consumer.Start(ctx, kafka.Config{
 			Brokers: strings.Split(settings.KafkaBrokers, ","),
-			Topic:   settings.VehicleEvent,
+			Topic:   settings.EventTopic,
 			Group:   "vehicle-event",
 		}, controller.VehicleEvent, &logger)
 

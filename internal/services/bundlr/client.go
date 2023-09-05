@@ -11,11 +11,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/DIMO-Network/trips-api/internal/config"
-	"github.com/uber/h3-go"
 	"github.com/warp-contracts/syncer/src/utils/arweave"
 	"github.com/warp-contracts/syncer/src/utils/bundlr"
 )
@@ -38,7 +38,7 @@ type PointTime struct {
 }
 
 func New(settings *config.Settings) (*Client, error) {
-	signer, err := bundlr.NewEthereumSigner("0x" + settings.EthereumSignerPrivateKey)
+	signer, err := bundlr.NewEthereumSigner("0x" + settings.BundlrPrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -52,31 +52,29 @@ func New(settings *config.Settings) (*Client, error) {
 }
 
 // PrepareData prepares data for uploading to bundlr by compressing and encrypting input.
-func (c *Client) PrepareData(data []byte, encryptionKey []byte, userDeviceID string, start, end PointTime) (bundlr.BundleItem, []byte, error) {
-	fileName := fmt.Sprintf("%s-%d-%d.zip", userDeviceID, start.Time.Unix(), end.Time.Unix())
+func (c *Client) PrepareData(data []byte, encryptionKey []byte, tokenId int, start, end time.Time) (*bundlr.BundleItem, error) {
+	fileName := fmt.Sprintf("%d-%d-%d.zip", tokenId, start.Unix(), end.Unix())
 	compressedData, err := c.compress(data, fileName)
 	if err != nil {
-		return bundlr.BundleItem{}, []byte{}, err
+		return nil, err
 	}
 
 	encryptedData, nonce, err := c.encrypt(compressedData, encryptionKey)
 	if err != nil {
-		return bundlr.BundleItem{}, []byte{}, err
+		return nil, err
 	}
 
-	dataItem := bundlr.BundleItem{
+	dataItem := &bundlr.BundleItem{
 		Data: arweave.Base64String(encryptedData),
 		Tags: bundlr.Tags{
-			bundlr.Tag{Name: "Device-ID", Value: userDeviceID},
-			bundlr.Tag{Name: "Start-Time", Value: start.Time.Format(time.RFC3339)},
-			bundlr.Tag{Name: "End-Time", Value: end.Time.Format(time.RFC3339)},
-			bundlr.Tag{Name: "StartHex", Value: fmt.Sprintf("%+v", h3.FromGeo(h3.GeoCoord{Latitude: start.Point.Latitude, Longitude: start.Point.Longitude}, 6))},
-			bundlr.Tag{Name: "EndHex", Value: fmt.Sprintf("%+v", h3.FromGeo(h3.GeoCoord{Latitude: end.Point.Latitude, Longitude: end.Point.Longitude}, 6))},
+			bundlr.Tag{Name: "Vehicle-Token-Id", Value: strconv.Itoa(tokenId)},
+			bundlr.Tag{Name: "Start-Time", Value: start.Format(time.RFC3339)},
+			bundlr.Tag{Name: "End-Time", Value: end.Format(time.RFC3339)},
 			bundlr.Tag{Name: "Nonce", Value: hex.EncodeToString(nonce)},
 		},
 	}
 
-	return dataItem, nonce, dataItem.Sign(c.Signer)
+	return dataItem, dataItem.Sign(c.Signer)
 }
 
 func (c *Client) Upload(dataItem bundlr.BundleItem) error {
@@ -109,25 +107,6 @@ func (c *Client) Upload(dataItem bundlr.BundleItem) error {
 	}
 
 	return nil
-}
-
-func (c *Client) Download(bundlrID string, key, nonce []byte) ([]string, error) {
-	resp, err := http.Get(c.url + bundlrID)
-	if err != nil {
-		return []string{}, err
-	}
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return []string{}, err
-	}
-
-	decryptedData, err := c.decrypt(data, key, nonce)
-	if err != nil {
-		return []string{}, err
-	}
-
-	return c.decompress(decryptedData)
 }
 
 func (c *Client) compress(data []byte, fileName string) ([]byte, error) {
@@ -164,44 +143,4 @@ func (c *Client) encrypt(data, key []byte) ([]byte, []byte, error) {
 	}
 
 	return aesgcm.Seal(nil, nonce, data, nil), nonce, nil
-}
-
-func (c *Client) decrypt(data, key, nonce []byte) ([]byte, error) {
-	aes, err := aes.NewCipher(key)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	aesgcm, err := cipher.NewGCM(aes)
-	if err != nil {
-		return []byte{}, err
-	}
-
-	return aesgcm.Open(nil, nonce, data, nil)
-}
-
-func (c *Client) decompress(decryptedBody []byte) ([]string, error) {
-	unzippedResp := make([]string, 0)
-
-	zipReader, err := zip.NewReader(bytes.NewReader(decryptedBody), int64(len(decryptedBody)))
-	if err != nil {
-		return unzippedResp, err
-	}
-
-	for _, zipFile := range zipReader.File {
-		f, err := zipFile.Open()
-		if err != nil {
-			return unzippedResp, err
-		}
-		defer f.Close()
-
-		unzippedBytes, err := io.ReadAll(f)
-		if err != nil {
-			return unzippedResp, err
-		}
-
-		unzippedResp = append(unzippedResp, string(unzippedBytes))
-	}
-
-	return unzippedResp, nil
 }

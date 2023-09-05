@@ -5,6 +5,7 @@ import (
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/gofiber/fiber/v2"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 type Handler struct {
@@ -25,12 +26,24 @@ func New(pgStore *pg_store.Store, bundlrClient *bundlr.Client) *Handler {
 func (h *Handler) Segments(c *fiber.Ctx) error {
 	deviceID := c.Params("id")
 
-	allSegments, err := models.Trips(
-		models.TripWhere.UserDeviceID.EQ(deviceID),
-	).All(c.Context(), h.pg.DB)
+	segments, err := models.Vehicles(
+		models.VehicleWhere.UserDeviceID.EQ(deviceID),
+		qm.Load(
+			models.VehicleRels.VehicleTokenTrips,
+			qm.Select(
+				models.TripColumns.ID,
+				models.TripColumns.VehicleTokenID,
+				models.TripColumns.BundlrID,
+				models.TripColumns.Start,
+				models.TripColumns.StartPosition,
+				models.TripColumns.End,
+				models.TripColumns.EndPosition,
+			)),
+	).One(c.Context(), h.pg.DB)
 	if err != nil {
 		return c.JSON(err)
 	}
 
-	return c.JSON(allSegments)
+	// returns null for cols not in select
+	return c.JSON(segments.R.VehicleTokenTrips)
 }

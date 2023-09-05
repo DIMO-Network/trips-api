@@ -2,10 +2,10 @@ package consumer
 
 import (
 	"context"
+	"crypto/rand"
 	"math/big"
 	"time"
 
-	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/kafka"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
@@ -16,8 +16,6 @@ import (
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/types"
-	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
 
 type Consumer struct {
@@ -25,7 +23,6 @@ type Consumer struct {
 	es     *es_store.Client
 	pg     *pg_store.Store
 	bundlr *bundlr.Client
-	grpc   pb_devices.UserDeviceServiceClient
 }
 
 type SegmentEvent struct {
@@ -47,8 +44,8 @@ type UserDeviceMintEvent struct {
 
 const UserDeviceMintEventType = "com.dimo.zone.device.mint"
 
-func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, devicesGRPC pb_devices.UserDeviceServiceClient, logger *zerolog.Logger) *Consumer {
-	return &Consumer{logger, es, pg, bundlrClient, devicesGRPC}
+func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, logger *zerolog.Logger) *Consumer {
+	return &Consumer{logger, es, pg, bundlrClient}
 }
 
 func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, *shared.CloudEvent[A]) error, logger *zerolog.Logger) {
@@ -59,49 +56,42 @@ func Start[A any](ctx context.Context, config kafka.Config, handler func(context
 }
 
 func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEvent[SegmentEvent]) error {
+	v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB)
+	if err != nil {
+		return err
+	}
+
 	response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start.Time, event.Data.End.Time)
 	if err != nil {
 		return err
 	}
 
-	vehicleData, err := c.pg.GetOrGenerateEncryptionKey(ctx, event.Data.DeviceID, c.grpc)
-	if err != nil {
+	encryptionKey := make([]byte, 32)
+	if _, err := rand.Read(encryptionKey); err != nil {
 		return err
 	}
 
-	dataItem, nonce, err := c.bundlr.PrepareData(response, vehicleData.EncryptionKey, vehicleData.UserDeviceID, event.Data.Start, event.Data.End)
+	dataItem, err := c.bundlr.PrepareData(response, encryptionKey, v.TokenID, event.Data.Start.Time, event.Data.End.Time)
 	if err != nil {
 		return err
 	}
 
 	segment := models.Trip{
-		VehicleTokenID: types.NullDecimal(vehicleData.TokenID),
-		UserDeviceID:   event.Data.DeviceID,
+		VehicleTokenID: v.TokenID,
+		EncryptionKey:  null.BytesFrom(encryptionKey),
 		ID:             ksuid.New().String(),
 		Start:          event.Data.Start.Time,
 		End:            null.TimeFrom(event.Data.End.Time),
-		StartPosition:  pgeo.NewPoint(event.Data.Start.Point.Longitude, event.Data.Start.Point.Latitude),
-		EndPosition:    pgeo.NewPoint(event.Data.End.Point.Longitude, event.Data.End.Point.Latitude),
-		Nonce:          nonce,
 		BundlrID:       null.StringFrom(dataItem.Id.Base64()),
 	}
 	if err := segment.Insert(
 		ctx,
 		c.pg.DB,
-		boil.Whitelist(
-			models.TripColumns.VehicleTokenID,
-			models.TripColumns.ID,
-			models.TripColumns.UserDeviceID,
-			models.TripColumns.Nonce,
-			models.TripColumns.BundlrID,
-			models.TripColumns.Start,
-			models.TripColumns.End,
-			models.TripColumns.StartPosition,
-			models.TripColumns.EndPosition)); err != nil {
+		boil.Infer()); err != nil {
 		return err
 	}
 
-	err = c.bundlr.Upload(dataItem)
+	err = c.bundlr.Upload(*dataItem)
 	if err != nil {
 		return err
 	}
@@ -112,11 +102,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEven
 
 func (c *Consumer) VehicleEvent(ctx context.Context, event *shared.CloudEvent[UserDeviceMintEvent]) error {
 	if event.Type == UserDeviceMintEventType {
-		c.logger.Info().Str("device", event.Data.Device.ID).Msg("vehicle node minted event recieved")
-		if _, err := c.pg.GenerateKey(ctx, event.Data.Device.ID, event.Data.NFT.TokenID.Uint64(), c.grpc); err != nil {
-			c.logger.Err(err).Str("device", event.Data.Device.ID).Msg("encryption key generation failed")
-			return err
-		}
+		return c.pg.StoreVehicle(ctx, event.Data.Device.ID, int(event.Data.NFT.TokenID.Int64()))
 	}
 	return nil
 }

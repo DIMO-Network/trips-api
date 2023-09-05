@@ -3,10 +3,10 @@
 SET search_path = trips_api, public;
 
 ALTER TABLE trips
-    ADD COLUMN start_position POINT NOT NULL;
+    ADD COLUMN start_position POINT;
 
 ALTER TABLE trips
-    ADD COLUMN end_position POINT NOT NULL;
+    ADD COLUMN end_position POINT;
 
 
 -- +goose StatementEnd
