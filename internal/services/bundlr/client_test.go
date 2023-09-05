@@ -54,6 +54,7 @@ func TestPrepareData(t *testing.T) {
 	assert.NoError(err)
 
 	decryptedCompressedData, err := aesgcm.Open(nil, nonce, encryptedData, nil)
+	assert.NoError(err)
 
 	// decompress
 	unzippedResp := make([]string, 0)
