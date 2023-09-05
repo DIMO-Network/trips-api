@@ -1,9 +1,14 @@
 package bundlr
 
 import (
+	"archive/zip"
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
+	"io"
 	"testing"
 	"time"
 
@@ -42,14 +47,31 @@ func TestPrepareData(t *testing.T) {
 	assert.NoError(err)
 
 	// decrypt
-	decryptedCompressedData, err := uploader.decrypt(encryptedData, key, nonce)
+	aes, err := aes.NewCipher(key)
 	assert.NoError(err)
-	assert.Equal(compressedData, decryptedCompressedData)
+
+	aesgcm, err := cipher.NewGCM(aes)
+	assert.NoError(err)
+
+	decryptedCompressedData, err := aesgcm.Open(nil, nonce, encryptedData, nil)
 
 	// decompress
-	original, err := uploader.decompress(decryptedCompressedData)
+	unzippedResp := make([]string, 0)
+
+	zipReader, err := zip.NewReader(bytes.NewReader(decryptedCompressedData), int64(len(decryptedCompressedData)))
 	assert.NoError(err)
 
-	assert.Equal(string(dataB), original[0])
+	for _, zipFile := range zipReader.File {
+		f, err := zipFile.Open()
+		assert.NoError(err)
+		defer f.Close()
+
+		unzippedBytes, err := io.ReadAll(f)
+		assert.NoError(err)
+
+		unzippedResp = append(unzippedResp, string(unzippedBytes))
+	}
+
+	assert.Equal(string(dataB), unzippedResp[0])
 
 }
