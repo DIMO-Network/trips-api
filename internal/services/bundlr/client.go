@@ -12,7 +12,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/DIMO-Network/trips-api/internal/config"
@@ -67,7 +66,7 @@ func (c *Client) PrepareData(data []byte, encryptionKey []byte, tokenId int, sta
 	return dataItem, dataItem.Sign(c.Signer)
 }
 
-func (c *Client) Upload(dataItem bundlr.BundleItem) error {
+func (c *Client) Upload(dataItem *bundlr.BundleItem) error {
 	reader, err := dataItem.Reader()
 	if err != nil {
 		return err
@@ -92,7 +91,7 @@ func (c *Client) Upload(dataItem bundlr.BundleItem) error {
 		return err
 	}
 
-	if strings.Contains(resp.Header.Get("Content-Type"), "text/plain") {
+	if resp.StatusCode >= 400 {
 		return errors.New(string(body))
 	}
 
