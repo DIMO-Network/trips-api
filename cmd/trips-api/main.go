@@ -10,11 +10,10 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/shared"
+	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/shared/kafka"
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/config"
-	"github.com/golang-jwt/jwt"
-
 	"github.com/DIMO-Network/trips-api/internal/database"
 	"github.com/DIMO-Network/trips-api/internal/handlers/pg_handler"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
@@ -25,8 +24,11 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/gofiber/swagger"
+	"github.com/golang-jwt/jwt"
 	_ "github.com/lib/pq"
 	"github.com/rs/zerolog"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const userIDContextKey = "userID"
@@ -117,7 +119,15 @@ func main() {
 
 		logger.Info().Interface("settings", settings).Msg("Settings")
 
-		handler := pg_handler.New(pgStore, bundlrClient)
+		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
+		}
+		defer usersConn.Close()
+
+		usersClient := pb_users.NewUserServiceClient(usersConn)
+
+		handler := pg_handler.New(pgStore, bundlrClient, usersClient)
 
 		app := fiber.New()
 		app.Use(cors.New(cors.Config{AllowOrigins: "*"}))
@@ -130,6 +140,7 @@ func main() {
 
 		deviceGroup := app.Group("/devices/:id", jwtAuth)
 		deviceGroup.Get("/segments", handler.Segments)
+		deviceGroup.Get("/:tripID/export", handler.Segments)
 
 		go func() {
 			logger.Info().Msgf("Starting API server on port %s.", settings.Port)

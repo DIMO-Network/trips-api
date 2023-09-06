@@ -8,6 +8,7 @@ import (
 
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/kafka"
+	"github.com/DIMO-Network/trips-api/internal/helpers"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
@@ -16,6 +17,7 @@ import (
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
 
 type Consumer struct {
@@ -26,9 +28,9 @@ type Consumer struct {
 }
 
 type SegmentEvent struct {
-	Start    bundlr.PointTime `json:"start"`
-	End      bundlr.PointTime `json:"end"`
-	DeviceID string           `json:"deviceID"`
+	Start    helpers.PointTime `json:"start"`
+	End      helpers.PointTime `json:"end"`
+	DeviceID string            `json:"deviceID"`
 }
 
 type UserDeviceMintEvent struct {
@@ -83,6 +85,8 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event *shared.CloudEven
 		Start:          event.Data.Start.Time,
 		End:            null.TimeFrom(event.Data.End.Time),
 		BundlrID:       null.StringFrom(dataItem.Id.Base64()),
+		StartPosition:  pgeo.NewNullPoint(pgeo.NewPoint(event.Data.Start.Point.Longitude, event.Data.Start.Point.Latitude), true),
+		EndPosition:    pgeo.NewNullPoint(pgeo.NewPoint(event.Data.End.Point.Longitude, event.Data.End.Point.Latitude), true),
 	}
 	if err := segment.Insert(
 		ctx,

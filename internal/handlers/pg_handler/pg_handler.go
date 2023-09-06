@@ -1,6 +1,11 @@
 package pg_handler
 
 import (
+	"context"
+	"fmt"
+
+	pb_users "github.com/DIMO-Network/shared/api/users"
+	"github.com/DIMO-Network/trips-api/internal/helpers"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
@@ -9,12 +14,13 @@ import (
 )
 
 type Handler struct {
-	pg     *pg_store.Store
-	bundlr *bundlr.Client
+	pg          *pg_store.Store
+	bundlr      *bundlr.Client
+	usersClient pb_users.UserServiceClient
 }
 
-func New(pgStore *pg_store.Store, bundlrClient *bundlr.Client) *Handler {
-	return &Handler{pgStore, bundlrClient}
+func New(pgStore *pg_store.Store, bundlrClient *bundlr.Client, usrClient pb_users.UserServiceClient) *Handler {
+	return &Handler{pgStore, bundlrClient, usrClient}
 }
 
 // Segments godoc
@@ -26,24 +32,79 @@ func New(pgStore *pg_store.Store, bundlrClient *bundlr.Client) *Handler {
 func (h *Handler) Segments(c *fiber.Ctx) error {
 	deviceID := c.Params("id")
 
-	segments, err := models.Vehicles(
-		models.VehicleWhere.UserDeviceID.EQ(deviceID),
-		qm.Load(
-			models.VehicleRels.VehicleTokenTrips,
-			qm.Select(
-				models.TripColumns.ID,
-				models.TripColumns.VehicleTokenID,
-				models.TripColumns.BundlrID,
-				models.TripColumns.Start,
-				models.TripColumns.StartPosition,
-				models.TripColumns.End,
-				models.TripColumns.EndPosition,
-			)),
-	).One(c.Context(), h.pg.DB)
+	segments, err := h.fetchSegments(c.Context(), &deviceID, nil)
 	if err != nil {
 		return c.JSON(err)
 	}
 
-	// returns null for cols not in select
-	return c.JSON(segments.R.VehicleTokenTrips)
+	return c.JSON(segments)
+}
+
+// ExportTrip godoc
+// @Description emails JSON trip summary to user's email address
+// @Tags        user-segments
+// @Produce     json
+// @Security    BearerAuth
+// @Router      /devices/:id/:tripID/export [get]
+func (h *Handler) ExportTrip(c *fiber.Ctx) error {
+	deviceID := c.Params("id")
+	tripID := c.Params("tripID")
+	userID := helpers.GetUserID(c)
+
+	user, err := h.usersClient.GetUser(c.Context(), &pb_users.GetUserRequest{Id: userID})
+	if err != nil {
+		return c.JSON(err)
+	}
+
+	if user.EmailAddress == nil {
+		return c.JSON(fmt.Errorf("valid email not found for user %s", userID))
+	}
+
+	segments, err := h.fetchSegments(c.Context(), &deviceID, &tripID)
+	if err != nil {
+		return c.JSON(err)
+	}
+
+	return c.JSON(segments)
+}
+
+func (h *Handler) fetchSegments(ctx context.Context, deviceID, tripID *string) ([]helpers.SegmentSummary, error) {
+	mods := []qm.QueryMod{
+		models.VehicleWhere.UserDeviceID.EQ(*deviceID),
+		qm.Load(models.VehicleRels.VehicleTokenTrips),
+	}
+
+	if tripID != nil {
+		mods = append(mods, qm.Load(models.VehicleRels.VehicleTokenTrips, models.TripWhere.ID.EQ(*tripID)))
+	}
+
+	segments, err := models.Vehicles(mods...).One(ctx, h.pg.DB)
+	if err != nil {
+		return nil, err
+	}
+
+	segmentsSummary := make([]helpers.SegmentSummary, 0)
+	for _, s := range segments.R.VehicleTokenTrips {
+		segmentsSummary = append(segmentsSummary, helpers.SegmentSummary{
+			TripID:   s.ID,
+			DeviceID: *deviceID,
+			BundlrID: s.BundlrID.String,
+			Start: helpers.PointTime{
+				Point: helpers.Point{
+					Latitude:  s.StartPosition.Y,
+					Longitude: s.StartPosition.X,
+				},
+				Time: s.Start,
+			},
+			End: helpers.PointTime{
+				Point: helpers.Point{
+					Latitude:  s.EndPosition.Y,
+					Longitude: s.EndPosition.X,
+				},
+				Time: s.End.Time,
+			},
+		})
+	}
+
+	return segmentsSummary, nil
 }

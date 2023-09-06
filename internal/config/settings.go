@@ -25,6 +25,14 @@ type Settings struct {
 	EventTopic       string `yaml:"EVENTS_TOPIC"`
 
 	JWTKeySetURL string `yaml:"JWT_KEY_SET_URL"`
+
+	UsersAPIGRPCAddr string `yaml:"USERS_API_GRPC_ADDR"`
+
+	EmailUsername string `yaml:"EMAIL_USERNAME"`
+	EmailPassword string `yaml:"EMAIL_PASSWORD"`
+	EmailHost     string `yaml:"EMAIL_HOST"`
+	EmailPort     string `yaml:"EMAIL_PORT"`
+	EmailFrom     string `yaml:"EMAIL_FROM"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader
