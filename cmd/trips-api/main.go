@@ -92,7 +92,7 @@ func main() {
 			})
 		})
 
-		go serveMonitoring(settings.MonPort, &logger)
+		go serveMonitoring(settings.MonPort, &logger) //nolint
 
 		go func() {
 			logger.Info().Msgf("Starting API server on port %s.", settings.Port)
