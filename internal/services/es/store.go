@@ -33,7 +33,7 @@ func New(settings *config.Settings) (*Client, error) {
 	return &Client{typedClient: es, indexPattern: settings.ElasticIndex}, nil
 }
 
-const pageSize = 100
+const pageSize = 1000
 
 func (s *Client) FetchData(ctx context.Context, userDeviceID string, start, end time.Time) ([]byte, error) {
 	ElasticSearchRequestTotal.Inc()
