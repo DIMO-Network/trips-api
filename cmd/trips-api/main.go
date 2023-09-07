@@ -17,7 +17,9 @@ import (
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 )
 
@@ -90,6 +92,8 @@ func main() {
 			})
 		})
 
+		go serveMonitoring(settings.MonPort, &logger)
+
 		go func() {
 			logger.Info().Msgf("Starting API server on port %s.", settings.Port)
 			if err := app.Listen(fmt.Sprintf(":%s", settings.Port)); err != nil {
@@ -103,4 +107,21 @@ func main() {
 		logger.Info().Msg("Gracefully shutting down and running cleanup tasks...")
 		_ = app.Shutdown()
 	}
+}
+
+func serveMonitoring(port string, logger *zerolog.Logger) (*fiber.App, error) {
+	logger.Info().Str("port", port).Msg("Starting monitoring web server.")
+
+	monApp := fiber.New(fiber.Config{DisableStartupMessage: true})
+
+	monApp.Get("/", func(c *fiber.Ctx) error { return nil })
+	monApp.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
+
+	go func() {
+		if err := monApp.Listen(":" + port); err != nil {
+			logger.Fatal().Err(err).Str("port", port).Msg("Failed to start monitoring web server.")
+		}
+	}()
+
+	return monApp, nil
 }
