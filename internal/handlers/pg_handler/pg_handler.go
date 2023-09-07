@@ -2,9 +2,7 @@ package pg_handler
 
 import (
 	"context"
-	"fmt"
 
-	pb_users "github.com/DIMO-Network/shared/api/users"
 	"github.com/DIMO-Network/trips-api/internal/helpers"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
@@ -14,13 +12,12 @@ import (
 )
 
 type Handler struct {
-	pg          *pg_store.Store
-	bundlr      *bundlr.Client
-	usersClient pb_users.UserServiceClient
+	pg     *pg_store.Store
+	bundlr *bundlr.Client
 }
 
-func New(pgStore *pg_store.Store, bundlrClient *bundlr.Client, usrClient pb_users.UserServiceClient) *Handler {
-	return &Handler{pgStore, bundlrClient, usrClient}
+func New(pgStore *pg_store.Store, bundlrClient *bundlr.Client) *Handler {
+	return &Handler{pgStore, bundlrClient}
 }
 
 // Segments godoc
@@ -29,7 +26,7 @@ func New(pgStore *pg_store.Store, bundlrClient *bundlr.Client, usrClient pb_user
 // @Produce     json
 // @Security    BearerAuth
 // @Router      /devices/:id/segments [get]
-func (h *Handler) Segments(c *fiber.Ctx) error {
+func (h *Handler) AllSegments(c *fiber.Ctx) error {
 	deviceID := c.Params("id")
 
 	segments, err := h.fetchSegments(c.Context(), &deviceID, nil)
@@ -40,25 +37,15 @@ func (h *Handler) Segments(c *fiber.Ctx) error {
 	return c.JSON(segments)
 }
 
-// ExportTrip godoc
-// @Description emails JSON trip summary to user's email address
+// SingleSegment godoc
+// @Description returns metadata for segment associated with device and tripID
 // @Tags        user-segments
 // @Produce     json
 // @Security    BearerAuth
-// @Router      /devices/:id/:tripID/export [get]
-func (h *Handler) ExportTrip(c *fiber.Ctx) error {
+// @Router      /devices/:id/segments/:tripID [get]
+func (h *Handler) SingleSegment(c *fiber.Ctx) error {
 	deviceID := c.Params("id")
 	tripID := c.Params("tripID")
-	userID := helpers.GetUserID(c)
-
-	user, err := h.usersClient.GetUser(c.Context(), &pb_users.GetUserRequest{Id: userID})
-	if err != nil {
-		return c.JSON(err)
-	}
-
-	if user.EmailAddress == nil {
-		return c.JSON(fmt.Errorf("valid email not found for user %s", userID))
-	}
 
 	segments, err := h.fetchSegments(c.Context(), &deviceID, &tripID)
 	if err != nil {
