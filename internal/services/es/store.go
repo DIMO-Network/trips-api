@@ -116,7 +116,7 @@ var (
 			Subsystem: "elasticsearch",
 			Name:      "request_duration_seconds",
 			Help:      "The distribution of request duration to ElasticSearch server in seconds.",
-			Buckets:   []float64{1, 2.5, 5, 10, 25, 50, 100, 250},
+			Buckets:   []float64{0.1, 0.15, 0.2, 0.25, 0.3, 0.5, 0.7, 0.9, 10},
 		},
 	)
 )
