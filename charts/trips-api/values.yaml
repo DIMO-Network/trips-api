@@ -32,6 +32,7 @@ env:
   ELASTIC_INDEX: devices-status-dev-*
   TRIP_EVENT_TOPIC: topic.device.trip.event
   EVENTS_TOPIC: topic.event
+  MON_PORT: 8888
   PORT: 8080
 service:
   type: ClusterIP

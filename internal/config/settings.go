@@ -4,7 +4,8 @@ import "fmt"
 
 // Settings credentials
 type Settings struct {
-	Port string `yaml:"PORT"`
+	Port    string `yaml:"PORT"`
+	MonPort string `yaml:"MON_PORT"`
 
 	DBUser     string `yaml:"DB_USER"`
 	DBPassword string `yaml:"DB_PASSWORD"`

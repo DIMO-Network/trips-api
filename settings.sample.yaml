@@ -15,3 +15,4 @@ EVENT_TOPIC: topic.event
 ETHEREUM_SIGNER_PRIVATE_KEY:
 BUNDLR_NETWORK: https://devnet.bundlr.network/tx/matic
 PORT: 8080
+MON_PORT: 8081
