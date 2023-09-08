@@ -85,12 +85,8 @@ func main() {
 			Group:   "vehicle-event",
 		}, controller.VehicleEvent, &logger)
 
+		// Currently has no routes.
 		app := fiber.New()
-		app.Get("/health", func(c *fiber.Ctx) error {
-			return c.JSON(map[string]interface{}{
-				"data": "Server is up and running",
-			})
-		})
 
 		go serveMonitoring(settings.MonPort, &logger) //nolint
 
