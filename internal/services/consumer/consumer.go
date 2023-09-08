@@ -60,7 +60,7 @@ func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, l
 	return &Consumer{logger, es, pg, bundlrClient}
 }
 
-func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, int, chan shared.CloudEvent[A], *sync.WaitGroup, *zerolog.Logger) error, taskChan chan shared.CloudEvent[A], wg *sync.WaitGroup, logger *zerolog.Logger) {
+func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, int, chan shared.CloudEvent[A], *sync.WaitGroup, *zerolog.Logger), taskChan chan shared.CloudEvent[A], wg *sync.WaitGroup, logger *zerolog.Logger) {
 	l := logger.With().Str("group", config.Group).Logger()
 
 	for i := 0; i < WorkerPoolSize; i++ {
@@ -78,27 +78,27 @@ func Start[A any](ctx context.Context, config kafka.Config, handler func(context
 	}
 }
 
-func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan chan shared.CloudEvent[SegmentEvent], wg *sync.WaitGroup, logger *zerolog.Logger) error {
+func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan chan shared.CloudEvent[SegmentEvent], wg *sync.WaitGroup, logger *zerolog.Logger) {
 	defer wg.Done()
 	for event := range taskChan {
 		v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB)
 		if err != nil {
-			return err
+			logger.Err(err).Msg("unable to find vehicle using device ID")
 		}
 
 		response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start.Time, event.Data.End.Time)
 		if err != nil {
-			return err
+			logger.Err(err).Msg("unable to fetch data from elasticsearch")
 		}
 
 		encryptionKey := make([]byte, 32)
 		if _, err := rand.Read(encryptionKey); err != nil {
-			return err
+			logger.Err(err).Msg("unable to make encryption key")
 		}
 
 		dataItem, err := c.bundlr.PrepareData(response, encryptionKey, v.TokenID, event.Data.Start.Time, event.Data.End.Time)
 		if err != nil {
-			return err
+			logger.Err(err).Msg("unable to prepare data")
 		}
 
 		segment := models.Trip{
@@ -113,23 +113,24 @@ func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan
 			ctx,
 			c.pg.DB,
 			boil.Infer()); err != nil {
-			return err
+			logger.Err(err).Msg("unable to insert segment to trips table")
 		}
 
 		// upload
 	}
 	logger.Info().Int("workerNum", workerNum).Msg("shutdown")
-	return nil
 }
 
-func (c *Consumer) VehicleEvent(ctx context.Context, workerNum int, taskChan chan shared.CloudEvent[UserDeviceMintEvent], wg *sync.WaitGroup, logger *zerolog.Logger) error {
+func (c *Consumer) VehicleEvent(ctx context.Context, workerNum int, taskChan chan shared.CloudEvent[UserDeviceMintEvent], wg *sync.WaitGroup, logger *zerolog.Logger) {
 	defer wg.Done()
 	for event := range taskChan {
 		if event.Type == UserDeviceMintEventType {
-			return c.pg.StoreVehicle(ctx, event.Data.Device.ID, int(event.Data.NFT.TokenID.Int64()))
+			err := c.pg.StoreVehicle(ctx, event.Data.Device.ID, int(event.Data.NFT.TokenID.Int64()))
+			if err != nil {
+				logger.Err(err).Msg("unable to store vehicle information")
+			}
 		}
-		return nil
+		continue
 	}
 	logger.Info().Int("workerNum", workerNum).Msg("shutdown")
-	return nil
 }
