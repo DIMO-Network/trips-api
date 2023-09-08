@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 
 	"github.com/DIMO-Network/shared"
@@ -70,20 +71,23 @@ func main() {
 		}
 
 		controller := consumer.New(esStore, bundlrClient, pgStore, &logger)
+		segmentChannel := make(chan shared.CloudEvent[consumer.SegmentEvent])
+		vehicleEventChannel := make(chan shared.CloudEvent[consumer.UserDeviceMintEvent])
+		var wg sync.WaitGroup
 
 		// start completed segment consumer
 		consumer.Start(ctx, kafka.Config{
 			Brokers: strings.Split(settings.KafkaBrokers, ","),
 			Topic:   settings.TripEventTopic,
 			Group:   "completed-segment",
-		}, controller.CompletedSegment, &logger)
+		}, controller.CompletedSegment, segmentChannel, &wg, &logger)
 
 		// start vehicle event consumer
 		consumer.Start(ctx, kafka.Config{
 			Brokers: strings.Split(settings.KafkaBrokers, ","),
 			Topic:   settings.EventTopic,
 			Group:   "vehicle-event",
-		}, controller.VehicleEvent, &logger)
+		}, controller.VehicleEvent, vehicleEventChannel, &wg, &logger)
 
 		app := fiber.New()
 		app.Get("/health", func(c *fiber.Ctx) error {
@@ -105,6 +109,9 @@ func main() {
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM) // When an interrupt or termination signal is sent, notify the channel
 		<-c                                             // This blocks the main thread until an interrupt is received
 		logger.Info().Msg("Gracefully shutting down and running cleanup tasks...")
+		close(segmentChannel)
+		close(vehicleEventChannel)
+		wg.Wait()
 		_ = app.Shutdown()
 	}
 }
