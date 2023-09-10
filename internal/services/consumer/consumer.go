@@ -84,6 +84,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan
 		v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB)
 		if err != nil {
 			logger.Err(err).Msg("unable to find vehicle using device ID")
+			return
 		}
 
 		response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start.Time, event.Data.End.Time)
