@@ -53,7 +53,7 @@ type UserDeviceMintEvent struct {
 	} `json:"nft"`
 }
 
-const WorkerPoolSize = 9
+const WorkerPoolSize = 20
 const UserDeviceMintEventType = "com.dimo.zone.device.mint"
 
 func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, logger *zerolog.Logger) *Consumer {
