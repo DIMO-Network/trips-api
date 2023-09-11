@@ -3,6 +3,7 @@ package consumer
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -20,10 +21,11 @@ import (
 )
 
 type Consumer struct {
-	logger *zerolog.Logger
-	es     *es_store.Client
-	pg     *pg_store.Store
-	bundlr *bundlr.Client
+	logger  *zerolog.Logger
+	es      *es_store.Client
+	pg      *pg_store.Store
+	bundlr  *bundlr.Client
+	ErrChan chan error
 }
 
 type SegmentEvent struct {
@@ -57,7 +59,8 @@ const WorkerPoolSize = 20
 const UserDeviceMintEventType = "com.dimo.zone.device.mint"
 
 func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, logger *zerolog.Logger) *Consumer {
-	return &Consumer{logger, es, pg, bundlrClient}
+	errorCannel := make(chan error)
+	return &Consumer{logger, es, pg, bundlrClient, errorCannel}
 }
 
 func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, int, chan shared.CloudEvent[A], *sync.WaitGroup, *zerolog.Logger), taskChan chan shared.CloudEvent[A], wg *sync.WaitGroup, logger *zerolog.Logger) {
@@ -83,23 +86,24 @@ func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan
 	for event := range taskChan {
 		v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB)
 		if err != nil {
-			logger.Err(err).Msg("unable to find vehicle using device ID")
-			return
+			c.ErrChan <- fmt.Errorf("unable to find vehicle using device ID: %w", err)
+			continue
+			// return
 		}
 
 		response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start.Time, event.Data.End.Time)
 		if err != nil {
-			logger.Err(err).Msg("unable to fetch data from elasticsearch")
+			c.ErrChan <- fmt.Errorf("unable to fetch data from elasticsearch: %w", err)
 		}
 
 		encryptionKey := make([]byte, 32)
 		if _, err := rand.Read(encryptionKey); err != nil {
-			logger.Err(err).Msg("unable to make encryption key")
+			c.ErrChan <- fmt.Errorf("unable to make encryption key: %w", err)
 		}
 
 		dataItem, err := c.bundlr.PrepareData(response, encryptionKey, v.TokenID, event.Data.Start.Time, event.Data.End.Time)
 		if err != nil {
-			logger.Err(err).Msg("unable to prepare data")
+			c.ErrChan <- fmt.Errorf("unable to prepare data: %w", err)
 		}
 
 		segment := models.Trip{
@@ -114,7 +118,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan
 			ctx,
 			c.pg.DB,
 			boil.Infer()); err != nil {
-			logger.Err(err).Msg("unable to insert segment to trips table")
+			c.ErrChan <- fmt.Errorf("unable to insert segment to trips table: %w", err)
 		}
 
 		// upload
@@ -128,7 +132,7 @@ func (c *Consumer) VehicleEvent(ctx context.Context, workerNum int, taskChan cha
 		if event.Type == UserDeviceMintEventType {
 			err := c.pg.StoreVehicle(ctx, event.Data.Device.ID, int(event.Data.NFT.TokenID.Int64()))
 			if err != nil {
-				logger.Err(err).Msg("unable to store vehicle information")
+				c.ErrChan <- fmt.Errorf("unable to store vehicle information: %w", err)
 			}
 		}
 		continue

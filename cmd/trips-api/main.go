@@ -89,6 +89,12 @@ func main() {
 			Group:   "vehicle-event",
 		}, controller.VehicleEvent, vehicleEventChannel, &wg, &logger)
 
+		go func() {
+			for e := range controller.ErrChan {
+				logger.Err(e).Msg("error processing event")
+			}
+		}()
+
 		// Currently has no routes.
 		app := fiber.New()
 
@@ -107,6 +113,7 @@ func main() {
 		logger.Info().Msg("Gracefully shutting down and running cleanup tasks...")
 		close(segmentChannel)
 		close(vehicleEventChannel)
+		close(controller.ErrChan)
 		wg.Wait()
 		_ = app.Shutdown()
 	}
