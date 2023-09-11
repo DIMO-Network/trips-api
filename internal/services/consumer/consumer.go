@@ -3,6 +3,7 @@ package consumer
 import (
 	"context"
 	"crypto/rand"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -80,53 +81,68 @@ func Start[A any](ctx context.Context, config kafka.Config, handler func(context
 }
 
 func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan chan shared.CloudEvent[SegmentEvent], wg *sync.WaitGroup, logger *zerolog.Logger) {
-	defer wg.Done()
-	for event := range taskChan {
-		v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB)
-		if err != nil {
-			logger.Err(err).Msg("unable to find vehicle using device ID")
+	defer func() {
+		wg.Done()
+		logger.Info().Int("workerNum", workerNum).Msg("shutdown")
+	}()
+
+	for {
+		select {
+		case event := <-taskChan:
+			if err := c.completedSegmentInner(ctx, workerNum, &event, logger); err != nil {
+				logger.Err(err).Msg("Error processing segment completion.")
+				if ctx.Err() != nil {
+					return
+				}
+			}
+		case <-ctx.Done():
 			return
 		}
-
-		encryptionKey := make([]byte, 32)
-		if _, err := rand.Read(encryptionKey); err != nil {
-			logger.Err(err).Msg("unable to make encryption key")
-		}
-
-		var bundlrID null.String
-
-		if c.dataFetchEnabled {
-			response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start.Time, event.Data.End.Time)
-			if err != nil {
-				logger.Err(err).Msg("unable to fetch data from elasticsearch")
-			}
-
-			dataItem, err := c.bundlr.PrepareData(response, encryptionKey, v.TokenID, event.Data.Start.Time, event.Data.End.Time)
-			if err != nil {
-				logger.Err(err).Msg("unable to prepare data")
-			}
-
-			bundlrID = null.StringFrom(dataItem.Id.Base64())
-		}
-
-		segment := models.Trip{
-			VehicleTokenID: v.TokenID,
-			EncryptionKey:  null.BytesFrom(encryptionKey),
-			ID:             ksuid.New().String(),
-			Start:          event.Data.Start.Time,
-			End:            null.TimeFrom(event.Data.End.Time),
-			BundlrID:       bundlrID,
-		}
-		if err := segment.Insert(
-			ctx,
-			c.pg.DB,
-			boil.Infer()); err != nil {
-			logger.Err(err).Msg("unable to insert segment to trips table")
-		}
-
-		// upload
 	}
-	logger.Info().Int("workerNum", workerNum).Msg("shutdown")
+
+}
+
+func (c *Consumer) completedSegmentInner(ctx context.Context, workerNum int, event *shared.CloudEvent[SegmentEvent], logger *zerolog.Logger) error {
+	v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB)
+	if err != nil {
+		return fmt.Errorf("failed to find vehicle %s: %w", event.Subject, err)
+	}
+
+	encryptionKey := make([]byte, 32)
+	if _, err := rand.Read(encryptionKey); err != nil {
+		return fmt.Errorf("couldn't produce random key: %w", err)
+	}
+
+	var bundlrID null.String
+
+	if c.dataFetchEnabled {
+		response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start.Time, event.Data.End.Time)
+		if err != nil {
+			return fmt.Errorf("call to Elasticsearch failed: %w", err)
+		}
+
+		dataItem, err := c.bundlr.PrepareData(response, encryptionKey, v.TokenID, event.Data.Start.Time, event.Data.End.Time)
+		if err != nil {
+			return fmt.Errorf("assembly for Bundlr failed: %w", err)
+		}
+
+		bundlrID = null.StringFrom(dataItem.Id.Base64())
+	}
+
+	segment := models.Trip{
+		VehicleTokenID: v.TokenID,
+		EncryptionKey:  null.BytesFrom(encryptionKey),
+		ID:             ksuid.New().String(),
+		Start:          event.Data.Start.Time,
+		End:            null.TimeFrom(event.Data.End.Time),
+		BundlrID:       bundlrID,
+	}
+
+	if err := segment.Insert(ctx, c.pg.DB, boil.Infer()); err != nil {
+		return fmt.Errorf("failed to insert new trip: %w", err)
+	}
+
+	return nil
 }
 
 func (c *Consumer) VehicleEvent(ctx context.Context, workerNum int, taskChan chan shared.CloudEvent[UserDeviceMintEvent], wg *sync.WaitGroup, logger *zerolog.Logger) {
