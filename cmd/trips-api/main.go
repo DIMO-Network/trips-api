@@ -71,8 +71,8 @@ func main() {
 		}
 
 		controller := consumer.New(esStore, bundlrClient, pgStore, &logger, settings.DataFetchEnabled)
-		segmentChannel := make(chan shared.CloudEvent[consumer.SegmentEvent])
-		vehicleEventChannel := make(chan shared.CloudEvent[consumer.UserDeviceMintEvent])
+		segmentChannel := make(chan *shared.CloudEvent[consumer.SegmentEvent])
+		vehicleEventChannel := make(chan *shared.CloudEvent[consumer.UserDeviceMintEvent])
 		var wg sync.WaitGroup
 
 		// start completed segment consumer

@@ -79,6 +79,8 @@ func (c *Client) compress(data []byte, fileName string) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
+// encrypt generates a random nonce and uses it to encrypt the given data with the
+// given key. It returns the ciphertext and the nonce.
 func (c *Client) encrypt(data, key []byte) ([]byte, []byte, error) {
 	aes, err := aes.NewCipher(key)
 	if err != nil {

@@ -62,7 +62,7 @@ func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, l
 	return &Consumer{logger, es, pg, bundlrClient, dataFetchEnabled}
 }
 
-func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, int, chan shared.CloudEvent[A], *sync.WaitGroup, *zerolog.Logger), taskChan chan shared.CloudEvent[A], wg *sync.WaitGroup, logger *zerolog.Logger) {
+func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, int, chan *shared.CloudEvent[A], *sync.WaitGroup, *zerolog.Logger), taskChan chan *shared.CloudEvent[A], wg *sync.WaitGroup, logger *zerolog.Logger) {
 	l := logger.With().Str("group", config.Group).Logger()
 
 	for i := 0; i < WorkerPoolSize; i++ {
@@ -72,7 +72,7 @@ func Start[A any](ctx context.Context, config kafka.Config, handler func(context
 	}
 
 	if err := kafka.Consume(ctx, config, func(ctx context.Context, evt *shared.CloudEvent[A]) error {
-		taskChan <- *evt
+		taskChan <- evt
 		return nil
 	}, &l); err != nil {
 		l.Err(err).Msg("unable to consume")
@@ -80,7 +80,7 @@ func Start[A any](ctx context.Context, config kafka.Config, handler func(context
 	}
 }
 
-func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan chan shared.CloudEvent[SegmentEvent], wg *sync.WaitGroup, logger *zerolog.Logger) {
+func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan chan *shared.CloudEvent[SegmentEvent], wg *sync.WaitGroup, logger *zerolog.Logger) {
 	defer func() {
 		wg.Done()
 		logger.Info().Int("workerNum", workerNum).Msg("shutdown")
@@ -89,7 +89,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan
 	for {
 		select {
 		case event := <-taskChan:
-			if err := c.completedSegmentInner(ctx, workerNum, &event, logger); err != nil {
+			if err := c.completedSegmentInner(ctx, workerNum, event, logger); err != nil {
 				logger.Err(err).Msg("Error processing segment completion.")
 				if ctx.Err() != nil {
 					return
@@ -145,7 +145,7 @@ func (c *Consumer) completedSegmentInner(ctx context.Context, workerNum int, eve
 	return nil
 }
 
-func (c *Consumer) VehicleEvent(ctx context.Context, workerNum int, taskChan chan shared.CloudEvent[UserDeviceMintEvent], wg *sync.WaitGroup, logger *zerolog.Logger) {
+func (c *Consumer) VehicleEvent(ctx context.Context, workerNum int, taskChan chan *shared.CloudEvent[UserDeviceMintEvent], wg *sync.WaitGroup, logger *zerolog.Logger) {
 	defer wg.Done()
 	for event := range taskChan {
 		if event.Type == UserDeviceMintEventType {
