@@ -20,10 +20,11 @@ import (
 )
 
 type Consumer struct {
-	logger *zerolog.Logger
-	es     *es_store.Client
-	pg     *pg_store.Store
-	bundlr *bundlr.Client
+	logger           *zerolog.Logger
+	es               *es_store.Client
+	pg               *pg_store.Store
+	bundlr           *bundlr.Client
+	dataFetchEnabled bool
 }
 
 type SegmentEvent struct {
@@ -56,8 +57,8 @@ type UserDeviceMintEvent struct {
 const WorkerPoolSize = 20
 const UserDeviceMintEventType = "com.dimo.zone.device.mint"
 
-func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, logger *zerolog.Logger) *Consumer {
-	return &Consumer{logger, es, pg, bundlrClient}
+func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, logger *zerolog.Logger, dataFetchEnabled bool) *Consumer {
+	return &Consumer{logger, es, pg, bundlrClient, dataFetchEnabled}
 }
 
 func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, int, chan shared.CloudEvent[A], *sync.WaitGroup, *zerolog.Logger), taskChan chan shared.CloudEvent[A], wg *sync.WaitGroup, logger *zerolog.Logger) {
@@ -87,19 +88,25 @@ func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan
 			return
 		}
 
-		response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start.Time, event.Data.End.Time)
-		if err != nil {
-			logger.Err(err).Msg("unable to fetch data from elasticsearch")
-		}
-
 		encryptionKey := make([]byte, 32)
 		if _, err := rand.Read(encryptionKey); err != nil {
 			logger.Err(err).Msg("unable to make encryption key")
 		}
 
-		dataItem, err := c.bundlr.PrepareData(response, encryptionKey, v.TokenID, event.Data.Start.Time, event.Data.End.Time)
-		if err != nil {
-			logger.Err(err).Msg("unable to prepare data")
+		var bundlrID null.String
+
+		if c.dataFetchEnabled {
+			response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start.Time, event.Data.End.Time)
+			if err != nil {
+				logger.Err(err).Msg("unable to fetch data from elasticsearch")
+			}
+
+			dataItem, err := c.bundlr.PrepareData(response, encryptionKey, v.TokenID, event.Data.Start.Time, event.Data.End.Time)
+			if err != nil {
+				logger.Err(err).Msg("unable to prepare data")
+			}
+
+			bundlrID = null.StringFrom(dataItem.Id.Base64())
 		}
 
 		segment := models.Trip{
@@ -108,7 +115,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan
 			ID:             ksuid.New().String(),
 			Start:          event.Data.Start.Time,
 			End:            null.TimeFrom(event.Data.End.Time),
-			BundlrID:       null.StringFrom(dataItem.Id.Base64()),
+			BundlrID:       bundlrID,
 		}
 		if err := segment.Insert(
 			ctx,
