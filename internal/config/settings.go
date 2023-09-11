@@ -24,6 +24,7 @@ type Settings struct {
 	EventTopic       string `yaml:"EVENTS_TOPIC"`
 
 	DataFetchEnabled bool `yaml:"DATA_FETCH_ENABLED"`
+	WorkerCount      int  `yaml:"WORKER_COUNT"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

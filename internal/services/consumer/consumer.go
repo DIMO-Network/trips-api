@@ -26,6 +26,7 @@ type Consumer struct {
 	pg               *pg_store.Store
 	bundlr           *bundlr.Client
 	dataFetchEnabled bool
+	workerCount      int
 }
 
 type SegmentEvent struct {
@@ -58,8 +59,8 @@ type UserDeviceMintEvent struct {
 const WorkerPoolSize = 20
 const UserDeviceMintEventType = "com.dimo.zone.device.mint"
 
-func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, logger *zerolog.Logger, dataFetchEnabled bool) *Consumer {
-	return &Consumer{logger, es, pg, bundlrClient, dataFetchEnabled}
+func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, logger *zerolog.Logger, dataFetchEnabled bool, workerCount int) *Consumer {
+	return &Consumer{logger, es, pg, bundlrClient, dataFetchEnabled, workerCount}
 }
 
 func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, int, chan *shared.CloudEvent[A], *sync.WaitGroup, *zerolog.Logger), taskChan chan *shared.CloudEvent[A], wg *sync.WaitGroup, logger *zerolog.Logger) {
