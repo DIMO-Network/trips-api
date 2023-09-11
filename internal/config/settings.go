@@ -22,6 +22,8 @@ type Settings struct {
 	TripEventTopic   string `yaml:"TRIP_EVENT_TOPIC"`
 	BundlrPrivateKey string `yaml:"BUNDLR_PRIVATE_KEY"`
 	EventTopic       string `yaml:"EVENTS_TOPIC"`
+
+	DataFetchEnabled bool `yaml:"DATA_FETCH_ENABLED"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

@@ -21,11 +21,12 @@ import (
 )
 
 type Consumer struct {
-	logger  *zerolog.Logger
-	es      *es_store.Client
-	pg      *pg_store.Store
-	bundlr  *bundlr.Client
-	ErrChan chan error
+	logger           *zerolog.Logger
+	es               *es_store.Client
+	pg               *pg_store.Store
+	bundlr           *bundlr.Client
+	ErrChan          chan error
+	dataFetchEnabled bool
 }
 
 type SegmentEvent struct {
@@ -58,9 +59,9 @@ type UserDeviceMintEvent struct {
 const WorkerPoolSize = 20
 const UserDeviceMintEventType = "com.dimo.zone.device.mint"
 
-func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, logger *zerolog.Logger) *Consumer {
-	errorCannel := make(chan error)
-	return &Consumer{logger, es, pg, bundlrClient, errorCannel}
+func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, logger *zerolog.Logger, dataFetchEnabled bool) *Consumer {
+	errorChannel := make(chan error)
+	return &Consumer{logger, es, pg, bundlrClient, errorChannel, dataFetchEnabled}
 }
 
 func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, int, chan shared.CloudEvent[A], *sync.WaitGroup, *zerolog.Logger), taskChan chan shared.CloudEvent[A], wg *sync.WaitGroup, logger *zerolog.Logger) {
@@ -91,19 +92,28 @@ func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan
 			// return
 		}
 
-		response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start.Time, event.Data.End.Time)
-		if err != nil {
-			c.ErrChan <- fmt.Errorf("unable to fetch data from elasticsearch: %w", err)
-		}
-
 		encryptionKey := make([]byte, 32)
 		if _, err := rand.Read(encryptionKey); err != nil {
 			c.ErrChan <- fmt.Errorf("unable to make encryption key: %w", err)
+			continue
 		}
 
-		dataItem, err := c.bundlr.PrepareData(response, encryptionKey, v.TokenID, event.Data.Start.Time, event.Data.End.Time)
-		if err != nil {
-			c.ErrChan <- fmt.Errorf("unable to prepare data: %w", err)
+		var bundlrID null.String
+
+		if c.dataFetchEnabled {
+			response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start.Time, event.Data.End.Time)
+			if err != nil {
+				c.ErrChan <- fmt.Errorf("unable to fetch data from elasticsearch: %w", err)
+				continue
+			}
+
+			dataItem, err := c.bundlr.PrepareData(response, encryptionKey, v.TokenID, event.Data.Start.Time, event.Data.End.Time)
+			if err != nil {
+				c.ErrChan <- fmt.Errorf("unable to prepare data: %w", err)
+				continue
+			}
+
+			bundlrID = null.StringFrom(dataItem.Id.Base64())
 		}
 
 		segment := models.Trip{
@@ -112,13 +122,14 @@ func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan
 			ID:             ksuid.New().String(),
 			Start:          event.Data.Start.Time,
 			End:            null.TimeFrom(event.Data.End.Time),
-			BundlrID:       null.StringFrom(dataItem.Id.Base64()),
+			BundlrID:       bundlrID,
 		}
 		if err := segment.Insert(
 			ctx,
 			c.pg.DB,
 			boil.Infer()); err != nil {
 			c.ErrChan <- fmt.Errorf("unable to insert segment to trips table: %w", err)
+			continue
 		}
 
 		// upload

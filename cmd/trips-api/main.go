@@ -70,7 +70,7 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to start Bunldr uploader")
 		}
 
-		controller := consumer.New(esStore, bundlrClient, pgStore, &logger)
+		controller := consumer.New(esStore, bundlrClient, pgStore, &logger, settings.DataFetchEnabled)
 		segmentChannel := make(chan shared.CloudEvent[consumer.SegmentEvent])
 		vehicleEventChannel := make(chan shared.CloudEvent[consumer.UserDeviceMintEvent])
 		var wg sync.WaitGroup

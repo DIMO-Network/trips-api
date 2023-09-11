@@ -34,6 +34,7 @@ env:
   EVENTS_TOPIC: topic.event
   MON_PORT: 8888
   PORT: 8080
+  BUNDLR_UPLOAD_ENABLED: true
 service:
   type: ClusterIP
   ports:
