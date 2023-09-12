@@ -8,13 +8,12 @@ import (
 	"strings"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/kafka"
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/config"
-	"github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/DIMO-Network/trips-api/internal/database"
 	"github.com/DIMO-Network/trips-api/internal/handlers/pg_handler"
@@ -22,10 +21,10 @@ import (
 	"github.com/DIMO-Network/trips-api/internal/services/consumer"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
+	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/gofiber/swagger"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -97,13 +96,9 @@ func main() {
 			Group:   "vehicle-event",
 		}, controller.VehicleEvent, vehicleEventChannel, &wg, &logger)
 
-		keyRefreshInterval := time.Hour
-		keyRefreshUnknownKID := true
 		jwtAuth := jwtware.New(
 			jwtware.Config{
-				KeySetURL:            settings.JWTKeySetURL,
-				KeyRefreshInterval:   &keyRefreshInterval,
-				KeyRefreshUnknownKID: &keyRefreshUnknownKID,
+				JWKSetURLs: []string{settings.JWTKeySetURL},
 				SuccessHandler: func(c *fiber.Ctx) error {
 					token := c.Locals("user").(*jwt.Token)
 					claims := token.Claims.(jwt.MapClaims)
