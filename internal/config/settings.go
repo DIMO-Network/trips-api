@@ -26,6 +26,7 @@ type Settings struct {
 	EventTopic       string `yaml:"EVENTS_TOPIC"`
 
 	DataFetchEnabled bool `yaml:"DATA_FETCH_ENABLED"`
+	BundlrEnabled    bool `yaml:"BUNDLR_ENABLED"`
 	WorkerCount      int  `yaml:"WORKER_COUNT"`
 }
 
