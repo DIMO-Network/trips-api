@@ -1,34 +1,31 @@
-package pg_handler
+package api
 
 import (
 	"context"
 
-	"github.com/DIMO-Network/trips-api/internal/helpers"
-	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
+	"github.com/DIMO-Network/trips-api/internal/utils"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 type Handler struct {
-	pg     *pg_store.Store
-	bundlr *bundlr.Client
+	pg *pg_store.Store
 }
 
-func New(pgStore *pg_store.Store, bundlrClient *bundlr.Client) *Handler {
-	return &Handler{pgStore, bundlrClient}
+func NewHandler(pgStore *pg_store.Store) *Handler {
+	return &Handler{pgStore}
 }
 
 // Segments godoc
-// @Description details for all segments associated with device
-// @Tags        user-segments
+// @Description details for all segments associated with vehicles
+// @Tags        vehicles-segments
 // @Produce     json
 // @Security    BearerAuth
-// @Router      /devices/:id/segments [get]
+// @Router      /vehicles/:id/segments [get]
 func (h *Handler) AllSegments(c *fiber.Ctx) error {
 	deviceID := c.Params("id")
-
 	segments, err := h.fetchSegments(c.Context(), &deviceID, nil)
 	if err != nil {
 		return c.JSON(err)
@@ -38,11 +35,11 @@ func (h *Handler) AllSegments(c *fiber.Ctx) error {
 }
 
 // SingleSegment godoc
-// @Description returns metadata for segment associated with device and tripID
-// @Tags        user-segments
+// @Description returns metadata for segment associated with vehicle and tripID
+// @Tags        vehicles-segments
 // @Produce     json
 // @Security    BearerAuth
-// @Router      /devices/:id/segments/:tripID [get]
+// @Router      /vehicles/:id/segments/:tripID [get]
 func (h *Handler) SingleSegment(c *fiber.Ctx) error {
 	deviceID := c.Params("id")
 	tripID := c.Params("tripID")
@@ -55,10 +52,21 @@ func (h *Handler) SingleSegment(c *fiber.Ctx) error {
 	return c.JSON(segments)
 }
 
-func (h *Handler) fetchSegments(ctx context.Context, deviceID, tripID *string) ([]helpers.SegmentSummary, error) {
+func (h *Handler) fetchSegments(ctx context.Context, deviceID, tripID *string) ([]utils.SegmentSummary, error) {
 	mods := []qm.QueryMod{
 		models.VehicleWhere.UserDeviceID.EQ(*deviceID),
-		qm.Load(models.VehicleRels.VehicleTokenTrips),
+		qm.Load(
+			models.VehicleRels.VehicleTokenTrips,
+			qm.Select(
+				models.TripColumns.ID,
+				models.TripColumns.VehicleTokenID,
+				models.TripColumns.BundlrID,
+				models.TripColumns.StartTime,
+				models.TripColumns.StartPosition,
+				models.TripColumns.EndTime,
+				models.TripColumns.EndPosition,
+			),
+			qm.OrderBy(models.TripColumns.EndTime+" DESC")),
 	}
 
 	if tripID != nil {
@@ -70,25 +78,25 @@ func (h *Handler) fetchSegments(ctx context.Context, deviceID, tripID *string) (
 		return nil, err
 	}
 
-	segmentsSummary := make([]helpers.SegmentSummary, 0)
+	segmentsSummary := make([]utils.SegmentSummary, 0)
 	for _, s := range segments.R.VehicleTokenTrips {
-		segmentsSummary = append(segmentsSummary, helpers.SegmentSummary{
+		segmentsSummary = append(segmentsSummary, utils.SegmentSummary{
 			TripID:   s.ID,
 			DeviceID: *deviceID,
 			BundlrID: s.BundlrID.String,
-			Start: helpers.PointTime{
-				Point: helpers.Point{
+			Start: utils.PointTime{
+				Point: utils.Point{
 					Latitude:  s.StartPosition.Y,
 					Longitude: s.StartPosition.X,
 				},
-				Time: s.Start,
+				Time: s.StartTime,
 			},
-			End: helpers.PointTime{
-				Point: helpers.Point{
+			End: utils.PointTime{
+				Point: utils.Point{
 					Latitude:  s.EndPosition.Y,
 					Longitude: s.EndPosition.X,
 				},
-				Time: s.End.Time,
+				Time: s.EndTime.Time,
 			},
 		})
 	}

@@ -4,7 +4,8 @@ import "fmt"
 
 // Settings credentials
 type Settings struct {
-	Port string `yaml:"PORT"`
+	Port    string `yaml:"PORT"`
+	MonPort string `yaml:"MON_PORT"`
 
 	DBUser     string `yaml:"DB_USER"`
 	DBPassword string `yaml:"DB_PASSWORD"`
@@ -24,7 +25,10 @@ type Settings struct {
 	BundlrCurrency   string `yaml:"BUNDLR_CURRENCY"`
 	EventTopic       string `yaml:"EVENTS_TOPIC"`
 
-	JWTKeySetURL string `yaml:"JWT_KEY_SET_URL"`
+	JWTKeySetURL     string `yaml:"JWT_KEY_SET_URL"`
+	DataFetchEnabled bool   `yaml:"DATA_FETCH_ENABLED"`
+	WorkerCount      int    `yaml:"WORKER_COUNT"`
+	BundlrEnabled    bool   `yaml:"BUNDLR_ENABLED"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

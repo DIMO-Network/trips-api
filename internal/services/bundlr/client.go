@@ -7,7 +7,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -67,32 +66,21 @@ func (c *Client) PrepareData(data []byte, encryptionKey []byte, tokenId int, sta
 }
 
 func (c *Client) Upload(dataItem *bundlr.BundleItem) error {
-	reader, err := dataItem.Reader()
+	reqBody, err := dataItem.Reader()
 	if err != nil {
 		return err
 	}
 
-	body, err := io.ReadAll(reader)
+	res, err := http.Post(c.url+"tx/"+c.currency, c.contentType, reqBody)
 	if err != nil {
-		return err
+		return fmt.Errorf("upload failed: %w", err)
 	}
 
-	postBody := bytes.NewBuffer(body)
+	defer res.Body.Close()
 
-	resp, err := http.Post(c.url+"tx/"+c.currency, c.contentType, postBody)
-	if err != nil {
-		return err
-	}
-
-	defer resp.Body.Close()
-
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode >= 400 {
-		return errors.New(string(body))
+	if code := res.StatusCode; code >= 400 {
+		resBody, _ := io.ReadAll(res.Body)
+		return fmt.Errorf("status code %d on upload, response body %s", code, string(resBody))
 	}
 
 	return nil
@@ -115,6 +103,8 @@ func (c *Client) compress(data []byte, fileName string) ([]byte, error) {
 	return buf.Bytes(), err
 }
 
+// encrypt generates a random nonce and uses it to encrypt the given data with the
+// given key. It returns the ciphertext and the nonce.
 func (c *Client) encrypt(data, key []byte) ([]byte, []byte, error) {
 	aes, err := aes.NewCipher(key)
 	if err != nil {
