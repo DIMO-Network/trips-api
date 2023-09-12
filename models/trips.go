@@ -26,8 +26,8 @@ import (
 // Trip is an object representing the database table.
 type Trip struct {
 	ID             string         `boil:"id" json:"id" toml:"id" yaml:"id"`
-	Start          time.Time      `boil:"start" json:"start" toml:"start" yaml:"start"`
-	End            null.Time      `boil:"end" json:"end,omitempty" toml:"end" yaml:"end,omitempty"`
+	StartTime      time.Time      `boil:"start_time" json:"start_time" toml:"start_time" yaml:"start_time"`
+	EndTime        null.Time      `boil:"end_time" json:"end_time,omitempty" toml:"end_time" yaml:"end_time,omitempty"`
 	VehicleTokenID int            `boil:"vehicle_token_id" json:"vehicle_token_id" toml:"vehicle_token_id" yaml:"vehicle_token_id"`
 	EncryptionKey  null.Bytes     `boil:"encryption_key" json:"encryption_key,omitempty" toml:"encryption_key" yaml:"encryption_key,omitempty"`
 	BundlrID       null.String    `boil:"bundlr_id" json:"bundlr_id,omitempty" toml:"bundlr_id" yaml:"bundlr_id,omitempty"`
@@ -40,8 +40,8 @@ type Trip struct {
 
 var TripColumns = struct {
 	ID             string
-	Start          string
-	End            string
+	StartTime      string
+	EndTime        string
 	VehicleTokenID string
 	EncryptionKey  string
 	BundlrID       string
@@ -49,8 +49,8 @@ var TripColumns = struct {
 	EndPosition    string
 }{
 	ID:             "id",
-	Start:          "start",
-	End:            "end",
+	StartTime:      "start_time",
+	EndTime:        "end_time",
 	VehicleTokenID: "vehicle_token_id",
 	EncryptionKey:  "encryption_key",
 	BundlrID:       "bundlr_id",
@@ -60,8 +60,8 @@ var TripColumns = struct {
 
 var TripTableColumns = struct {
 	ID             string
-	Start          string
-	End            string
+	StartTime      string
+	EndTime        string
 	VehicleTokenID string
 	EncryptionKey  string
 	BundlrID       string
@@ -69,8 +69,8 @@ var TripTableColumns = struct {
 	EndPosition    string
 }{
 	ID:             "trips.id",
-	Start:          "trips.start",
-	End:            "trips.end",
+	StartTime:      "trips.start_time",
+	EndTime:        "trips.end_time",
 	VehicleTokenID: "trips.vehicle_token_id",
 	EncryptionKey:  "trips.encryption_key",
 	BundlrID:       "trips.bundlr_id",
@@ -259,8 +259,8 @@ func (w whereHelperpgeo_NullPoint) IsNotNull() qm.QueryMod { return qmhelper.Whe
 
 var TripWhere = struct {
 	ID             whereHelperstring
-	Start          whereHelpertime_Time
-	End            whereHelpernull_Time
+	StartTime      whereHelpertime_Time
+	EndTime        whereHelpernull_Time
 	VehicleTokenID whereHelperint
 	EncryptionKey  whereHelpernull_Bytes
 	BundlrID       whereHelpernull_String
@@ -268,8 +268,8 @@ var TripWhere = struct {
 	EndPosition    whereHelperpgeo_NullPoint
 }{
 	ID:             whereHelperstring{field: "\"trips_api\".\"trips\".\"id\""},
-	Start:          whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"start\""},
-	End:            whereHelpernull_Time{field: "\"trips_api\".\"trips\".\"end\""},
+	StartTime:      whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"start_time\""},
+	EndTime:        whereHelpernull_Time{field: "\"trips_api\".\"trips\".\"end_time\""},
 	VehicleTokenID: whereHelperint{field: "\"trips_api\".\"trips\".\"vehicle_token_id\""},
 	EncryptionKey:  whereHelpernull_Bytes{field: "\"trips_api\".\"trips\".\"encryption_key\""},
 	BundlrID:       whereHelpernull_String{field: "\"trips_api\".\"trips\".\"bundlr_id\""},
@@ -305,9 +305,9 @@ func (r *tripR) GetVehicleToken() *Vehicle {
 type tripL struct{}
 
 var (
-	tripAllColumns            = []string{"id", "start", "end", "vehicle_token_id", "encryption_key", "bundlr_id", "start_position", "end_position"}
-	tripColumnsWithoutDefault = []string{"id", "start", "vehicle_token_id"}
-	tripColumnsWithDefault    = []string{"end", "encryption_key", "bundlr_id", "start_position", "end_position"}
+	tripAllColumns            = []string{"id", "start_time", "end_time", "vehicle_token_id", "encryption_key", "bundlr_id", "start_position", "end_position"}
+	tripColumnsWithoutDefault = []string{"id", "start_time", "vehicle_token_id"}
+	tripColumnsWithDefault    = []string{"end_time", "encryption_key", "bundlr_id", "start_position", "end_position"}
 	tripPrimaryKeyColumns     = []string{"id"}
 	tripGeneratedColumns      = []string{}
 )

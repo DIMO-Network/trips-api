@@ -18,6 +18,7 @@ import (
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
 
 type Consumer struct {
@@ -131,8 +132,10 @@ func (c *Consumer) completedSegmentInner(ctx context.Context, workerNum int, eve
 		VehicleTokenID: v.TokenID,
 		EncryptionKey:  null.BytesFrom(encryptionKey),
 		ID:             ksuid.New().String(),
-		Start:          event.Data.Start.Time,
-		End:            null.TimeFrom(event.Data.End.Time),
+		StartTime:      event.Data.Start.Time,
+		EndTime:        null.TimeFrom(event.Data.End.Time),
+		StartPosition:  pgeo.NewNullPoint(pgeo.NewPoint(event.Data.Start.Point.Longitude, event.Data.Start.Point.Latitude), true),
+		EndPosition:    pgeo.NewNullPoint(pgeo.NewPoint(event.Data.End.Point.Longitude, event.Data.End.Point.Latitude), true),
 		BundlrID:       bundlrID,
 	}
 
