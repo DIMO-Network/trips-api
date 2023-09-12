@@ -28,6 +28,7 @@ type Settings struct {
 	JWTKeySetURL     string `yaml:"JWT_KEY_SET_URL"`
 	DataFetchEnabled bool   `yaml:"DATA_FETCH_ENABLED"`
 	WorkerCount      int    `yaml:"WORKER_COUNT"`
+	BundlrEnabled    bool   `yaml:"BUNDLR_ENABLED"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

@@ -12,7 +12,8 @@ env:
   JWT_KEY_SET_URL: https://auth.dimo.zone/keys
   DEVICES_API_GRPC_ADDR: devices-api-prod:8086
   ELASTIC_INDEX: devices-status-prod-*
-  DATA_FETCH_ENABLED: false
+  DATA_FETCH_ENABLED: true
+  BUNDLR_ENABLED: false
 ingress:
   enabled: true
   className: nginx
