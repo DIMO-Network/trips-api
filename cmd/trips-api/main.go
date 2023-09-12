@@ -27,7 +27,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-const userIDContextKey = "userID"
+// const userIDContextKey = "userID"
 
 // @title                      DIMO Segment API
 // @version                    1.0
