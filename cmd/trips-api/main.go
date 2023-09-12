@@ -12,16 +12,13 @@ import (
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/kafka"
 	_ "github.com/DIMO-Network/trips-api/docs"
-	"github.com/DIMO-Network/trips-api/internal/api"
 	"github.com/DIMO-Network/trips-api/internal/config"
-	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/DIMO-Network/trips-api/internal/database"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	"github.com/DIMO-Network/trips-api/internal/services/consumer"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
-	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/swagger"
@@ -95,37 +92,36 @@ func main() {
 			Group:   "vehicle-event",
 		}, controller.VehicleEvent, vehicleEventChannel, &wg, &logger)
 
-		jwtAuth := jwtware.New(
-			jwtware.Config{
-				JWKSetURLs: []string{settings.JWTKeySetURL},
-				SuccessHandler: func(c *fiber.Ctx) error {
-					token := c.Locals("user").(*jwt.Token)
-					claims := token.Claims.(jwt.MapClaims)
-					c.Locals(userIDContextKey, claims["sub"].(string))
-					return c.Next()
-				},
-				ErrorHandler: func(c *fiber.Ctx, err error) error {
-					return c.Status(fiber.StatusUnauthorized).JSON(
-						map[string]any{
-							"code":    401,
-							"message": "Invalid or expired JWT.",
-						},
-					)
-				},
-			},
-		)
+		// jwtAuth := jwtware.New(
+		// 	jwtware.Config{
+		// 		JWKSetURLs: []string{settings.JWTKeySetURL},
+		// 		SuccessHandler: func(c *fiber.Ctx) error {
+		// 			token := c.Locals("user").(*jwt.Token)
+		// 			claims := token.Claims.(jwt.MapClaims)
+		// 			c.Locals(userIDContextKey, claims["sub"].(string))
+		// 			return c.Next()
+		// 		},
+		// 		ErrorHandler: func(c *fiber.Ctx, err error) error {
+		// 			return c.Status(fiber.StatusUnauthorized).JSON(
+		// 				map[string]any{
+		// 					"code":    401,
+		// 					"message": "Invalid or expired JWT.",
+		// 				},
+		// 			)
+		// 		},
+		// 	},
+		// )
 
 		logger.Info().Interface("settings", settings).Msg("Settings")
-
-		handler := api.NewHandler(pgStore)
 
 		app := fiber.New()
 		app.Get("/swagger/*", swagger.HandlerDefault)
 
 		go serveMonitoring(settings.MonPort, &logger) //nolint
 
-		vehicleGroup := app.Group("/vehicles/:id", jwtAuth)
-		vehicleGroup.Get("/segments", handler.Segments)
+		// handler := api.NewHandler(pgStore)
+		// vehicleGroup := app.Group("/vehicles/:id", jwtAuth)
+		// vehicleGroup.Get("/segments", handler.Segments)
 
 		go func() {
 			logger.Info().Msgf("Starting API server on port %s.", settings.Port)
