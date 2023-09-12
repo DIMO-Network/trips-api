@@ -34,11 +34,12 @@ func (h *Handler) Segments(c *fiber.Ctx) error {
 				models.TripColumns.ID,
 				models.TripColumns.VehicleTokenID,
 				models.TripColumns.BundlrID,
-				models.TripColumns.Start,
+				models.TripColumns.StartTime,
 				models.TripColumns.StartPosition,
-				models.TripColumns.End,
+				models.TripColumns.EndTime,
 				models.TripColumns.EndPosition,
 			)),
+		qm.OrderBy(models.TripColumns.EndTime+" DESC"),
 	).One(c.Context(), h.pg.DB)
 	if err != nil {
 		return c.JSON(err)
