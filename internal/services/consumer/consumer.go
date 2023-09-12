@@ -134,7 +134,7 @@ func (c *Consumer) completedSegmentInner(ctx context.Context, workerNum int, eve
 		ID:             ksuid.New().String(),
 		StartTime:      event.Data.Start.Time,
 		EndTime:        null.TimeFrom(event.Data.End.Time),
-		StartPosition:  pgeo.NewNullPoint(pointToDB(event.Data.Start.Point), true),
+		StartPosition:  pointToDB(event.Data.Start.Point),
 		EndPosition:    pgeo.NewNullPoint(pointToDB(event.Data.End.Point), true),
 		BundlrID:       bundlrID,
 	}
