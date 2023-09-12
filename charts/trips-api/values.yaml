@@ -38,6 +38,7 @@ env:
   PORT: 8080
   DATA_FETCH_ENABLED: true
   WORKER_COUNT: 30
+  BUNDLR_ENABLED: true
 service:
   type: ClusterIP
   ports:

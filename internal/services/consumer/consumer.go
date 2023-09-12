@@ -27,6 +27,7 @@ type Consumer struct {
 	bundlr           *bundlr.Client
 	dataFetchEnabled bool
 	workerCount      int
+	bundlrEnabled    bool
 }
 
 type SegmentEvent struct {
@@ -59,8 +60,8 @@ type UserDeviceMintEvent struct {
 const WorkerPoolSize = 20
 const UserDeviceMintEventType = "com.dimo.zone.device.mint"
 
-func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, logger *zerolog.Logger, dataFetchEnabled bool, workerCount int) *Consumer {
-	return &Consumer{logger, es, pg, bundlrClient, dataFetchEnabled, workerCount}
+func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, logger *zerolog.Logger, dataFetchEnabled bool, workerCount int, bundlrEnabled bool) *Consumer {
+	return &Consumer{logger, es, pg, bundlrClient, dataFetchEnabled, workerCount, bundlrEnabled}
 }
 
 func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, int, chan *shared.CloudEvent[A], *sync.WaitGroup, *zerolog.Logger), taskChan chan *shared.CloudEvent[A], wg *sync.WaitGroup, logger *zerolog.Logger) {
@@ -127,16 +128,11 @@ func (c *Consumer) completedSegmentInner(ctx context.Context, workerNum int, eve
 			return fmt.Errorf("assembly for Bundlr failed: %w", err)
 		}
 
-    if err := c.bundlr.Upload(dataItem); err != nil {
-			return err
-    }
-
-		bundlrID = null.StringFrom(dataItem.Id.Base64())
-
-		err = c.bundlr.Upload(dataItem)
-		if err != nil {
+		if err := c.bundlr.Upload(dataItem); err != nil {
 			return err
 		}
+
+		bundlrID = null.StringFrom(dataItem.Id.Base64())
 
 		c.logger.Info().Msgf("https://devnet.bundlr.network/%s", dataItem.Id.Base64())
 	}
