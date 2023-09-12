@@ -1,7 +1,6 @@
-package pg_handler
+package api
 
 import (
-	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/gofiber/fiber/v2"
@@ -9,23 +8,21 @@ import (
 )
 
 type Handler struct {
-	pg     *pg_store.Store
-	bundlr *bundlr.Client
+	pg *pg_store.Store
 }
 
-func New(pgStore *pg_store.Store, bundlrClient *bundlr.Client) *Handler {
-	return &Handler{pgStore, bundlrClient}
+func NewHandler(pgStore *pg_store.Store) *Handler {
+	return &Handler{pgStore}
 }
 
 // Segments godoc
-// @Description details for all segments associated with device
-// @Tags        user-segments
+// @Description details for all segments associated with vehicles
+// @Tags        vehicles-segments
 // @Produce     json
 // @Security    BearerAuth
-// @Router      /devices/:id/segments [get]
+// @Router      /vehicles/:id/segments [get]
 func (h *Handler) Segments(c *fiber.Ctx) error {
 	deviceID := c.Params("id")
-
 	segments, err := models.Vehicles(
 		models.VehicleWhere.UserDeviceID.EQ(deviceID),
 		qm.Load(
@@ -38,13 +35,13 @@ func (h *Handler) Segments(c *fiber.Ctx) error {
 				models.TripColumns.StartPosition,
 				models.TripColumns.EndTime,
 				models.TripColumns.EndPosition,
-			)),
-		qm.OrderBy(models.TripColumns.EndTime+" DESC"),
+			),
+			qm.OrderBy(models.TripColumns.EndTime+" DESC")),
 	).One(c.Context(), h.pg.DB)
 	if err != nil {
 		return c.JSON(err)
 	}
 
-	// returns null for cols not in select
+	// returns null for encryption key
 	return c.JSON(segments.R.VehicleTokenTrips)
 }

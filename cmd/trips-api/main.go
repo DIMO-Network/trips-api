@@ -12,11 +12,11 @@ import (
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/kafka"
 	_ "github.com/DIMO-Network/trips-api/docs"
+	"github.com/DIMO-Network/trips-api/internal/api"
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/DIMO-Network/trips-api/internal/database"
-	"github.com/DIMO-Network/trips-api/internal/handlers/pg_handler"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	"github.com/DIMO-Network/trips-api/internal/services/consumer"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
@@ -117,7 +117,7 @@ func main() {
 
 		logger.Info().Interface("settings", settings).Msg("Settings")
 
-		handler := pg_handler.New(pgStore, bundlrClient)
+		handler := api.NewHandler(pgStore)
 
 		app := fiber.New()
 		app.Get("/swagger/*", swagger.HandlerDefault)
