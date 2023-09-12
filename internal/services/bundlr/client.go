@@ -8,6 +8,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -17,7 +19,10 @@ import (
 )
 
 type Client struct {
-	Signer *bundlr.EthereumSigner
+	Signer      *bundlr.EthereumSigner
+	url         string
+	contentType string
+	currency    string
 }
 
 func New(settings *config.Settings) (*Client, error) {
@@ -27,7 +32,10 @@ func New(settings *config.Settings) (*Client, error) {
 	}
 
 	return &Client{
-		Signer: signer,
+		Signer:      signer,
+		url:         settings.BundlrNetwork,
+		contentType: "application/octet-stream",
+		currency:    settings.BundlrCurrency,
 	}, nil
 }
 
@@ -57,9 +65,25 @@ func (c *Client) PrepareData(data []byte, encryptionKey []byte, tokenId int, sta
 	return dataItem, dataItem.Sign(c.Signer)
 }
 
-func (c *Client) Upload(dataItem bundlr.BundleItem) (string, error) {
-	// TO DO
-	return "", nil
+func (c *Client) Upload(dataItem *bundlr.BundleItem) error {
+	reqBody, err := dataItem.Reader()
+	if err != nil {
+		return err
+	}
+
+	res, err := http.Post(c.url+"tx/"+c.currency, c.contentType, reqBody)
+	if err != nil {
+		return fmt.Errorf("upload failed: %w", err)
+	}
+
+	defer res.Body.Close()
+
+	if code := res.StatusCode; code >= 400 {
+		resBody, _ := io.ReadAll(res.Body)
+		return fmt.Errorf("status code %d on upload, response body %s", code, string(resBody))
+	}
+
+	return nil
 }
 
 func (c *Client) compress(data []byte, fileName string) ([]byte, error) {

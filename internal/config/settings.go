@@ -21,9 +21,12 @@ type Settings struct {
 	KafkaBrokers     string `yaml:"KAFKA_BROKERS"`
 	TripEventTopic   string `yaml:"TRIP_EVENT_TOPIC"`
 	BundlrPrivateKey string `yaml:"BUNDLR_PRIVATE_KEY"`
+	BundlrNetwork    string `yaml:"BUNDLR_NETWORK"`
+	BundlrCurrency   string `yaml:"BUNDLR_CURRENCY"`
 	EventTopic       string `yaml:"EVENTS_TOPIC"`
 
 	DataFetchEnabled bool `yaml:"DATA_FETCH_ENABLED"`
+	BundlrEnabled    bool `yaml:"BUNDLR_ENABLED"`
 	WorkerCount      int  `yaml:"WORKER_COUNT"`
 }
 

@@ -4,12 +4,12 @@ image:
   pullPolicy: IfNotPresent
   tag: 14d1f73
 imagePullSecrets: []
-nameOverride: ''
-fullnameOverride: ''
+nameOverride: ""
+fullnameOverride: ""
 serviceAccount:
   create: true
   annotations: {}
-  name: ''
+  name: ""
 podAnnotations: {}
 podSecurityContext:
   runAsNonRoot: true
@@ -32,10 +32,13 @@ env:
   ELASTIC_INDEX: devices-status-dev-*
   TRIP_EVENT_TOPIC: topic.device.trip.event
   EVENTS_TOPIC: topic.event
+  BUNDLR_NETWORK: https://devnet.bundlr.network/
+  BUNDLR_CURRENCY: matic
   MON_PORT: 8888
   PORT: 8080
   DATA_FETCH_ENABLED: true
   WORKER_COUNT: 30
+  BUNDLR_ENABLED: true
 service:
   type: ClusterIP
   ports:
@@ -59,10 +62,10 @@ ingress:
   className: nginx
   annotations:
     nginx.ingress.kubernetes.io/auth-tls-secret: ingress/cf-origin-ca
-    nginx.ingress.kubernetes.io/auth-tls-verify-client: 'on'
-    nginx.ingress.kubernetes.io/enable-cors: 'true'
+    nginx.ingress.kubernetes.io/auth-tls-verify-client: "on"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/cors-allow-origin: https://app.dev.dimo.zone
-    nginx.ingress.kubernetes.io/limit-rps: '3'
+    nginx.ingress.kubernetes.io/limit-rps: "3"
     external-dns.alpha.kubernetes.io/hostname: trips-api.dev.dimo.zone
   hosts:
     - host: trips-api.dev.dimo.zone

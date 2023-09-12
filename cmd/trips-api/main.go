@@ -67,10 +67,10 @@ func main() {
 
 		bundlrClient, err := bundlr.New(&settings)
 		if err != nil {
-			logger.Fatal().Err(err).Msg("Failed to start Bunldr uploader")
+			logger.Fatal().Err(err).Msg("Failed to initialize Bundlr client")
 		}
 
-		controller := consumer.New(esStore, bundlrClient, pgStore, &logger, settings.DataFetchEnabled, settings.WorkerCount)
+		controller := consumer.New(esStore, bundlrClient, pgStore, &logger, settings.DataFetchEnabled, settings.WorkerCount, settings.BundlrEnabled)
 		segmentChannel := make(chan *shared.CloudEvent[consumer.SegmentEvent])
 		vehicleEventChannel := make(chan *shared.CloudEvent[consumer.UserDeviceMintEvent])
 		var wg sync.WaitGroup
