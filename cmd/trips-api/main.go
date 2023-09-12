@@ -24,7 +24,6 @@ import (
 	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
-	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/swagger"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -121,18 +120,12 @@ func main() {
 		handler := pg_handler.New(pgStore, bundlrClient)
 
 		app := fiber.New()
-		app.Use(cors.New(cors.Config{AllowOrigins: "*"}))
 		app.Get("/swagger/*", swagger.HandlerDefault)
-		app.Get("/health", func(c *fiber.Ctx) error {
-			return c.JSON(map[string]interface{}{
-				"data": "Server is up and running",
-			})
-		})
 
 		go serveMonitoring(settings.MonPort, &logger) //nolint
 
-		deviceGroup := app.Group("/devices/:id", jwtAuth)
-		deviceGroup.Get("/segments", handler.Segments)
+		vehicleGroup := app.Group("/vehicles/:id", jwtAuth)
+		vehicleGroup.Get("/segments", handler.Segments)
 
 		go func() {
 			logger.Info().Msgf("Starting API server on port %s.", settings.Port)
