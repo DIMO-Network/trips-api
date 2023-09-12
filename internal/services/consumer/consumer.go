@@ -134,8 +134,8 @@ func (c *Consumer) completedSegmentInner(ctx context.Context, workerNum int, eve
 		ID:             ksuid.New().String(),
 		StartTime:      event.Data.Start.Time,
 		EndTime:        null.TimeFrom(event.Data.End.Time),
-		StartPosition:  pgeo.NewNullPoint(pgeo.NewPoint(event.Data.Start.Point.Longitude, event.Data.Start.Point.Latitude), true),
-		EndPosition:    pgeo.NewNullPoint(pgeo.NewPoint(event.Data.End.Point.Longitude, event.Data.End.Point.Latitude), true),
+		StartPosition:  pgeo.NewNullPoint(pointToDB(event.Data.Start.Point), true),
+		EndPosition:    pgeo.NewNullPoint(pointToDB(event.Data.End.Point), true),
 		BundlrID:       bundlrID,
 	}
 
@@ -158,4 +158,8 @@ func (c *Consumer) VehicleEvent(ctx context.Context, workerNum int, taskChan cha
 		continue
 	}
 	logger.Info().Int("workerNum", workerNum).Msg("shutdown")
+}
+
+func pointToDB(p bundlr.Point) pgeo.Point {
+	return pgeo.NewPoint(p.Longitude, p.Latitude)
 }
