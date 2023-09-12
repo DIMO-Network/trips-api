@@ -18,6 +18,7 @@ import (
 	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
 
 type Consumer struct {
@@ -31,19 +32,9 @@ type Consumer struct {
 }
 
 type SegmentEvent struct {
-	Start    PointTime `json:"start"`
-	End      PointTime `json:"end"`
-	DeviceID string    `json:"deviceID"`
-}
-
-type Point struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
-type PointTime struct {
-	Point Point     `json:"point"`
-	Time  time.Time `json:"time"`
+	Start    bundlr.PointTime `json:"start"`
+	End      bundlr.PointTime `json:"end"`
+	DeviceID string           `json:"deviceID"`
 }
 
 type UserDeviceMintEvent struct {
@@ -141,8 +132,10 @@ func (c *Consumer) completedSegmentInner(ctx context.Context, workerNum int, eve
 		VehicleTokenID: v.TokenID,
 		EncryptionKey:  null.BytesFrom(encryptionKey),
 		ID:             ksuid.New().String(),
-		Start:          event.Data.Start.Time,
-		End:            null.TimeFrom(event.Data.End.Time),
+		StartTime:      event.Data.Start.Time,
+		EndTime:        null.TimeFrom(event.Data.End.Time),
+		StartPosition:  pointToDB(event.Data.Start.Point),
+		EndPosition:    pgeo.NewNullPoint(pointToDB(event.Data.End.Point), true),
 		BundlrID:       bundlrID,
 	}
 
@@ -165,4 +158,8 @@ func (c *Consumer) VehicleEvent(ctx context.Context, workerNum int, taskChan cha
 		continue
 	}
 	logger.Info().Int("workerNum", workerNum).Msg("shutdown")
+}
+
+func pointToDB(p bundlr.Point) pgeo.Point {
+	return pgeo.NewPoint(p.Longitude, p.Latitude)
 }
