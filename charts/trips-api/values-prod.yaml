@@ -2,7 +2,7 @@ replicaCount: 2
 image:
   repository: dimozone/trips-api
   pullPolicy: IfNotPresent
-  tag: 0.2.1
+  tag: 0.3.5
 cronJob:
   enabled: false
   schedule: 0 0 * * 0
@@ -12,6 +12,7 @@ env:
   JWT_KEY_SET_URL: https://auth.dimo.zone/keys
   DEVICES_API_GRPC_ADDR: devices-api-prod:8086
   ELASTIC_INDEX: devices-status-prod-*
+  DATA_FETCH_ENABLED: false
 ingress:
   enabled: true
   className: nginx

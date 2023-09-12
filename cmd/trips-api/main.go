@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -22,10 +23,12 @@ import (
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	jwtware "github.com/gofiber/jwt/v3"
 	"github.com/gofiber/swagger"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 )
 
@@ -75,21 +78,24 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to initialize Bundlr client")
 		}
 
-		controller := consumer.New(esStore, bundlrClient, pgStore, &logger)
+		controller := consumer.New(esStore, bundlrClient, pgStore, &logger, settings.DataFetchEnabled, settings.WorkerCount)
+		segmentChannel := make(chan *shared.CloudEvent[consumer.SegmentEvent])
+		vehicleEventChannel := make(chan *shared.CloudEvent[consumer.UserDeviceMintEvent])
+		var wg sync.WaitGroup
 
 		// start completed segment consumer
 		consumer.Start(ctx, kafka.Config{
 			Brokers: strings.Split(settings.KafkaBrokers, ","),
 			Topic:   settings.TripEventTopic,
 			Group:   "completed-segment",
-		}, controller.CompletedSegment, &logger)
+		}, controller.CompletedSegment, segmentChannel, &wg, &logger)
 
 		// start vehicle event consumer
 		consumer.Start(ctx, kafka.Config{
 			Brokers: strings.Split(settings.KafkaBrokers, ","),
 			Topic:   settings.EventTopic,
 			Group:   "vehicle-event",
-		}, controller.VehicleEvent, &logger)
+		}, controller.VehicleEvent, vehicleEventChannel, &wg, &logger)
 
 		keyRefreshInterval := time.Hour
 		keyRefreshUnknownKID := true
@@ -128,6 +134,8 @@ func main() {
 			})
 		})
 
+		go serveMonitoring(settings.MonPort, &logger) //nolint
+
 		deviceGroup := app.Group("/devices/:id", jwtAuth)
 		deviceGroup.Get("/segments", handler.Segments)
 
@@ -142,6 +150,26 @@ func main() {
 		signal.Notify(c, os.Interrupt, syscall.SIGTERM) // When an interrupt or termination signal is sent, notify the channel
 		<-c                                             // This blocks the main thread until an interrupt is received
 		logger.Info().Msg("Gracefully shutting down and running cleanup tasks...")
+		close(segmentChannel)
+		close(vehicleEventChannel)
+		wg.Wait()
 		_ = app.Shutdown()
 	}
+}
+
+func serveMonitoring(port string, logger *zerolog.Logger) (*fiber.App, error) {
+	logger.Info().Str("port", port).Msg("Starting monitoring web server.")
+
+	monApp := fiber.New(fiber.Config{DisableStartupMessage: true})
+
+	monApp.Get("/", func(c *fiber.Ctx) error { return nil })
+	monApp.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
+
+	go func() {
+		if err := monApp.Listen(":" + port); err != nil {
+			logger.Fatal().Err(err).Str("port", port).Msg("Failed to start monitoring web server.")
+		}
+	}()
+
+	return monApp, nil
 }
