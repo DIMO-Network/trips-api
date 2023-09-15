@@ -120,8 +120,10 @@ func (c *Consumer) completedSegmentInner(ctx context.Context, workerNum int, eve
 			return fmt.Errorf("assembly for Bundlr failed: %w", err)
 		}
 
-		if err := c.bundlr.Upload(dataItem); err != nil {
-			return err
+		if c.bundlrEnabled {
+			if err := c.bundlr.Upload(dataItem); err != nil {
+				return err
+			}
 		}
 
 		bundlrID = null.StringFrom(dataItem.Id.Base64())
