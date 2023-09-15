@@ -18,7 +18,7 @@ func NewHandler(pgStore *pg_store.Store) *Handler {
 	return &Handler{pgStore}
 }
 
-// Segments godoc
+// AllSegments godoc
 // @Description details for all segments associated with vehicles
 // @Tags        vehicles-segments
 // @Produce     json
@@ -42,7 +42,7 @@ func (h *Handler) AllSegments(c *fiber.Ctx) error {
 // @Router      /vehicles/:id/segments/:tripID [get]
 func (h *Handler) SingleSegment(c *fiber.Ctx) error {
 	deviceID := c.Params("id")
-	tripID := c.Params("tripID")
+	tripID := c.Params("tripId")
 
 	segments, err := h.fetchSegments(c.Context(), &deviceID, &tripID)
 	if err != nil {
