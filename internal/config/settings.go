@@ -34,6 +34,7 @@ type Settings struct {
 	DeployedContractPrivateKey string `yaml:"DEPLOYED_CONTRACT_PRIVATE_KEY"`
 	DeployedContractAddress    string `yaml:"DEPLOYED_CONTRACT_ADDRESS"`
 	UsersAPIGRPCAddr           string `yaml:"USERS_API_GRPC_ADDR"`
+	ChainID                    int64  `yaml:"CHAIN_ID"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

@@ -20,6 +20,7 @@ type Transactor struct {
 	TripNft    *tripNft.TripNft
 	privateKey *ecdsa.PrivateKey
 	addr       common.Address
+	chainId    int64
 }
 
 func New(settings *config.Settings) (*Transactor, error) {
@@ -51,6 +52,7 @@ func New(settings *config.Settings) (*Transactor, error) {
 		TripNft:    instance,
 		privateKey: privateKey,
 		addr:       addr,
+		chainId:    settings.ChainID,
 	}, nil
 }
 
@@ -65,7 +67,10 @@ func (t *Transactor) MintSegment(ctx context.Context, owner common.Address, vehi
 		return nil, err
 	}
 
-	auth := bind.NewKeyedTransactor(t.privateKey)
+	auth, err := bind.NewKeyedTransactorWithChainID(t.privateKey, big.NewInt(t.chainId))
+	if err != nil {
+		return nil, err
+	}
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)
 	auth.GasLimit = uint64(300000)
