@@ -39,7 +39,7 @@ func (h *Handler) AllSegments(c *fiber.Ctx) error {
 // @Tags        vehicles-segments
 // @Produce     json
 // @Security    BearerAuth
-// @Router      /vehicles/:id/segments/:tripID [get]
+// @Router      /vehicles/:id/segments/:tripId [get]
 func (h *Handler) SingleSegment(c *fiber.Ctx) error {
 	deviceID := c.Params("id")
 	tripID := c.Params("tripId")
