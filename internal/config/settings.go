@@ -29,6 +29,10 @@ type Settings struct {
 	DataFetchEnabled bool   `yaml:"DATA_FETCH_ENABLED"`
 	WorkerCount      int    `yaml:"WORKER_COUNT"`
 	BundlrEnabled    bool   `yaml:"BUNDLR_ENABLED"`
+
+	RPCUrl                     string `yaml:"RPC_URL"`
+	DeployedContractPrivateKey string `yaml:"DEPLOYED_CONTRACT_PRIVATE_KEY"`
+	DeployedContractAddress    string `yaml:"DEPLOYED_CONTRACT_ADDRESS"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

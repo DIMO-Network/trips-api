@@ -19,6 +19,7 @@ import (
 	"github.com/DIMO-Network/trips-api/internal/services/consumer"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
+	"github.com/DIMO-Network/trips-api/internal/services/transactor"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/swagger"
@@ -73,7 +74,12 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to initialize Bundlr client")
 		}
 
-		controller := consumer.New(esStore, bundlrClient, pgStore, &logger, settings.DataFetchEnabled, settings.WorkerCount, settings.BundlrEnabled)
+		transactor, err := transactor.New(&settings)
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to initialize Transactor")
+		}
+
+		controller := consumer.New(esStore, bundlrClient, pgStore, transactor, &logger, settings.DataFetchEnabled, settings.WorkerCount, settings.BundlrEnabled)
 		segmentChannel := make(chan *shared.CloudEvent[consumer.SegmentEvent])
 		vehicleEventChannel := make(chan *shared.CloudEvent[consumer.UserDeviceMintEvent])
 		var wg sync.WaitGroup
@@ -92,36 +98,12 @@ func main() {
 			Group:   "vehicle-event",
 		}, controller.VehicleEvent, vehicleEventChannel, &wg, &logger)
 
-		// jwtAuth := jwtware.New(
-		// 	jwtware.Config{
-		// 		JWKSetURLs: []string{settings.JWTKeySetURL},
-		// 		SuccessHandler: func(c *fiber.Ctx) error {
-		// 			token := c.Locals("user").(*jwt.Token)
-		// 			claims := token.Claims.(jwt.MapClaims)
-		// 			c.Locals(userIDContextKey, claims["sub"].(string))
-		// 			return c.Next()
-		// 		},
-		// 		ErrorHandler: func(c *fiber.Ctx, err error) error {
-		// 			return c.Status(fiber.StatusUnauthorized).JSON(
-		// 				map[string]any{
-		// 					"code":    401,
-		// 					"message": "Invalid or expired JWT.",
-		// 				},
-		// 			)
-		// 		},
-		// 	},
-		// )
-
 		logger.Info().Interface("settings", settings).Msg("Settings")
 
 		app := fiber.New()
 		app.Get("/swagger/*", swagger.HandlerDefault)
 
 		go serveMonitoring(settings.MonPort, &logger) //nolint
-
-		// handler := api.NewHandler(pgStore)
-		// vehicleGroup := app.Group("/vehicles/:id", jwtAuth)
-		// vehicleGroup.Get("/segments", handler.Segments)
 
 		go func() {
 			logger.Info().Msgf("Starting API server on port %s.", settings.Port)

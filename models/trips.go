@@ -33,6 +33,7 @@ type Trip struct {
 	BundlrID       null.String    `boil:"bundlr_id" json:"bundlr_id,omitempty" toml:"bundlr_id" yaml:"bundlr_id,omitempty"`
 	StartPosition  pgeo.Point     `boil:"start_position" json:"start_position" toml:"start_position" yaml:"start_position"`
 	EndPosition    pgeo.NullPoint `boil:"end_position" json:"end_position,omitempty" toml:"end_position" yaml:"end_position,omitempty"`
+	TXHash         null.Bytes     `boil:"tx_hash" json:"tx_hash,omitempty" toml:"tx_hash" yaml:"tx_hash,omitempty"`
 
 	R *tripR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L tripL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -47,6 +48,7 @@ var TripColumns = struct {
 	BundlrID       string
 	StartPosition  string
 	EndPosition    string
+	TXHash         string
 }{
 	ID:             "id",
 	StartTime:      "start_time",
@@ -56,6 +58,7 @@ var TripColumns = struct {
 	BundlrID:       "bundlr_id",
 	StartPosition:  "start_position",
 	EndPosition:    "end_position",
+	TXHash:         "tx_hash",
 }
 
 var TripTableColumns = struct {
@@ -67,6 +70,7 @@ var TripTableColumns = struct {
 	BundlrID       string
 	StartPosition  string
 	EndPosition    string
+	TXHash         string
 }{
 	ID:             "trips.id",
 	StartTime:      "trips.start_time",
@@ -76,6 +80,7 @@ var TripTableColumns = struct {
 	BundlrID:       "trips.bundlr_id",
 	StartPosition:  "trips.start_position",
 	EndPosition:    "trips.end_position",
+	TXHash:         "trips.tx_hash",
 }
 
 // Generated where
@@ -287,6 +292,7 @@ var TripWhere = struct {
 	BundlrID       whereHelpernull_String
 	StartPosition  whereHelperpgeo_Point
 	EndPosition    whereHelperpgeo_NullPoint
+	TXHash         whereHelpernull_Bytes
 }{
 	ID:             whereHelperstring{field: "\"trips_api\".\"trips\".\"id\""},
 	StartTime:      whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"start_time\""},
@@ -296,6 +302,7 @@ var TripWhere = struct {
 	BundlrID:       whereHelpernull_String{field: "\"trips_api\".\"trips\".\"bundlr_id\""},
 	StartPosition:  whereHelperpgeo_Point{field: "\"trips_api\".\"trips\".\"start_position\""},
 	EndPosition:    whereHelperpgeo_NullPoint{field: "\"trips_api\".\"trips\".\"end_position\""},
+	TXHash:         whereHelpernull_Bytes{field: "\"trips_api\".\"trips\".\"tx_hash\""},
 }
 
 // TripRels is where relationship names are stored.
@@ -326,9 +333,9 @@ func (r *tripR) GetVehicleToken() *Vehicle {
 type tripL struct{}
 
 var (
-	tripAllColumns            = []string{"id", "start_time", "end_time", "vehicle_token_id", "encryption_key", "bundlr_id", "start_position", "end_position"}
+	tripAllColumns            = []string{"id", "start_time", "end_time", "vehicle_token_id", "encryption_key", "bundlr_id", "start_position", "end_position", "tx_hash"}
 	tripColumnsWithoutDefault = []string{"id", "start_time", "vehicle_token_id", "start_position"}
-	tripColumnsWithDefault    = []string{"end_time", "encryption_key", "bundlr_id", "end_position"}
+	tripColumnsWithDefault    = []string{"end_time", "encryption_key", "bundlr_id", "end_position", "tx_hash"}
 	tripPrimaryKeyColumns     = []string{"id"}
 	tripGeneratedColumns      = []string{}
 )
