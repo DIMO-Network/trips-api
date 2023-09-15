@@ -33,6 +33,7 @@ type Settings struct {
 	RPCUrl                     string `yaml:"RPC_URL"`
 	DeployedContractPrivateKey string `yaml:"DEPLOYED_CONTRACT_PRIVATE_KEY"`
 	DeployedContractAddress    string `yaml:"DEPLOYED_CONTRACT_ADDRESS"`
+	UsersAPIGRPCAddr           string `yaml:"USERS_API_GRPC_ADDR"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

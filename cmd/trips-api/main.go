@@ -13,7 +13,10 @@ import (
 	"github.com/DIMO-Network/shared/kafka"
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/config"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
+	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/DIMO-Network/trips-api/internal/database"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	"github.com/DIMO-Network/trips-api/internal/services/consumer"
@@ -79,7 +82,14 @@ func main() {
 			logger.Fatal().Err(err).Msg("Failed to initialize Transactor")
 		}
 
-		controller := consumer.New(esStore, bundlrClient, pgStore, transactor, &logger, settings.DataFetchEnabled, settings.WorkerCount, settings.BundlrEnabled)
+		usersConn, err := grpc.Dial(settings.UsersAPIGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			logger.Fatal().Err(err).Msg("Failed to create device definitions API client.")
+		}
+		defer usersConn.Close()
+		devicesClient := pb_devices.NewUserDeviceServiceClient(usersConn)
+
+		controller := consumer.New(esStore, bundlrClient, pgStore, transactor, devicesClient, &logger, settings.DataFetchEnabled, settings.WorkerCount, settings.BundlrEnabled)
 		segmentChannel := make(chan *shared.CloudEvent[consumer.SegmentEvent])
 		vehicleEventChannel := make(chan *shared.CloudEvent[consumer.UserDeviceMintEvent])
 		var wg sync.WaitGroup

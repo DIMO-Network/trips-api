@@ -16,6 +16,8 @@ import (
 	"github.com/DIMO-Network/trips-api/internal/services/transactor"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/ethereum/go-ethereum/common"
+
+	pb_devices "github.com/DIMO-Network/devices-api/pkg/grpc"
 	"github.com/rs/zerolog"
 	"github.com/segmentio/ksuid"
 	"github.com/uber/h3-go/v3"
@@ -30,6 +32,7 @@ type Consumer struct {
 	pg               *pg_store.Store
 	bundlr           *bundlr.Client
 	transactor       *transactor.Transactor
+	devicesClient    pb_devices.UserDeviceServiceClient
 	dataFetchEnabled bool
 	workerCount      int
 	bundlrEnabled    bool
@@ -55,8 +58,8 @@ type UserDeviceMintEvent struct {
 const WorkerPoolSize = 20
 const UserDeviceMintEventType = "com.dimo.zone.device.mint"
 
-func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, transactor *transactor.Transactor, logger *zerolog.Logger, dataFetchEnabled bool, workerCount int, bundlrEnabled bool) *Consumer {
-	return &Consumer{logger, es, pg, bundlrClient, transactor, dataFetchEnabled, workerCount, bundlrEnabled}
+func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, transactor *transactor.Transactor, devicesClient pb_devices.UserDeviceServiceClient, logger *zerolog.Logger, dataFetchEnabled bool, workerCount int, bundlrEnabled bool) *Consumer {
+	return &Consumer{logger, es, pg, bundlrClient, transactor, devicesClient, dataFetchEnabled, workerCount, bundlrEnabled}
 }
 
 func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, int, chan *shared.CloudEvent[A], *sync.WaitGroup, *zerolog.Logger), taskChan chan *shared.CloudEvent[A], wg *sync.WaitGroup, logger *zerolog.Logger) {
@@ -148,11 +151,17 @@ func (c *Consumer) completedSegmentInner(ctx context.Context, workerNum int, eve
 	startHex := h3.FromGeo(h3.GeoCoord{Latitude: segment.StartPosition.X, Longitude: segment.StartPosition.Y}, 6)
 	endHex := h3.FromGeo(h3.GeoCoord{Latitude: segment.EndPosition.X, Longitude: segment.EndPosition.Y}, 6)
 
-	// TODO: add a way to get user addrs
-	addr := common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")
+	userDevice, err := c.devicesClient.GetUserDeviceByTokenId(ctx, &pb_devices.GetUserDeviceByTokenIdRequest{
+		TokenId: int64(segment.VehicleTokenID),
+	})
+	if err != nil {
+		c.logger.Err(err).Msg("unable to fetch user address from devices api")
+		return err
+	}
+
 	tx, err := c.transactor.MintSegment(
 		ctx,
-		addr,
+		common.BytesToAddress(userDevice.OwnerAddress),
 		big.NewInt(int64(segment.VehicleTokenID)),
 		uint64(segment.StartTime.Unix()),
 		uint64(segment.EndTime.Time.Unix()),
