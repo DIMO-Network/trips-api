@@ -97,7 +97,7 @@ func main() {
 			Group:   "vehicle-event",
 		}, controller.VehicleEvent, vehicleEventChannel, &wg, &logger)
 
-		logger.Info().Interface("settings", settings).Msg("Settings")
+		logger.Info().Interface("settings", settings.PrivilegeJWKURL).Msg("Settings")
 
 		app := fiber.New()
 		app.Get("/swagger/*", swagger.HandlerDefault)

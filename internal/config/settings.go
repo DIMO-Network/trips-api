@@ -25,10 +25,9 @@ type Settings struct {
 	BundlrCurrency   string `yaml:"BUNDLR_CURRENCY"`
 	EventTopic       string `yaml:"EVENTS_TOPIC"`
 
-	JWTKeySetURL     string `yaml:"JWT_KEY_SET_URL"`
-	DataFetchEnabled bool   `yaml:"DATA_FETCH_ENABLED"`
-	WorkerCount      int    `yaml:"WORKER_COUNT"`
-	BundlrEnabled    bool   `yaml:"BUNDLR_ENABLED"`
+	DataFetchEnabled bool `yaml:"DATA_FETCH_ENABLED"`
+	WorkerCount      int  `yaml:"WORKER_COUNT"`
+	BundlrEnabled    bool `yaml:"BUNDLR_ENABLED"`
 
 	PrivilegeJWKURL string `json:"PRIVILEGE_JWK_URL"`
 
