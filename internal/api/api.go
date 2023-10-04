@@ -1,6 +1,10 @@
 package api
 
 import (
+	"database/sql"
+	"strconv"
+	"time"
+
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/gofiber/fiber/v2"
@@ -15,33 +19,78 @@ func NewHandler(pgStore *pg_store.Store) *Handler {
 	return &Handler{pgStore}
 }
 
+const maxPageSize = 100
+
 // Segments godoc
 // @Description details for all segments associated with vehicles
 // @Tags        vehicles-segments
 // @Produce     json
 // @Security    BearerAuth
-// @Router      /vehicles/:id/segments [get]
+// @Router      /vehicle/:tokenID/trips [get]
 func (h *Handler) Segments(c *fiber.Ctx) error {
-	deviceID := c.Params("id")
-	segments, err := models.Vehicles(
-		models.VehicleWhere.UserDeviceID.EQ(deviceID),
-		qm.Load(
-			models.VehicleRels.VehicleTokenTrips,
-			qm.Select(
-				models.TripColumns.ID,
-				models.TripColumns.VehicleTokenID,
-				models.TripColumns.BundlrID,
-				models.TripColumns.StartTime,
-				models.TripColumns.StartPosition,
-				models.TripColumns.EndTime,
-				models.TripColumns.EndPosition,
-			),
-			qm.OrderBy(models.TripColumns.EndTime+" DESC")),
-	).One(c.Context(), h.pg.DB)
+	rawTokenID := c.Params("tokenID")
+	tokenID, err := strconv.Atoi(rawTokenID)
 	if err != nil {
-		return c.JSON(err)
+		return fiber.NewError(fiber.StatusBadRequest, "Couldn't parse vehicle token id.")
 	}
 
-	// returns null for encryption key
-	return c.JSON(segments.R.VehicleTokenTrips)
+	v, err := models.Vehicles(
+		models.VehicleWhere.TokenID.EQ(tokenID),
+		qm.Load(
+			models.VehicleRels.VehicleTokenTrips,
+			qm.OrderBy(models.TripColumns.EndTime+" DESC"),
+			qm.Limit(maxPageSize),
+		),
+	).One(c.Context(), h.pg.DB)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fiber.NewError(fiber.StatusNotFound, "No vehicle with that token id.")
+		}
+	}
+
+	trips := v.R.VehicleTokenTrips
+
+	out := VehicleTripsResp{
+		Trips: make([]VehicleTripResp, len(trips)),
+	}
+
+	for i, t := range v.R.VehicleTokenTrips {
+		out.Trips[i] = VehicleTripResp{
+			Start: PointTime{
+				Time: t.StartTime,
+				Location: Location{
+					Latitude:  t.StartPosition.Y,
+					Longitude: t.StartPosition.X,
+				},
+			},
+			End: PointTime{
+				Time: t.EndTime.Time,
+				Location: Location{
+					Latitude:  t.EndPosition.Y,
+					Longitude: t.EndPosition.X,
+				},
+			},
+		}
+	}
+
+	return c.JSON(out)
+}
+
+type VehicleTripsResp struct {
+	Trips []VehicleTripResp `json:"trips"`
+}
+
+type VehicleTripResp struct {
+	Start PointTime `json:"start"`
+	End   PointTime `json:"end"`
+}
+
+type PointTime struct {
+	Time     time.Time `json:"time"`
+	Location Location  `json:"location"`
+}
+
+type Location struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
 }

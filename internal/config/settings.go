@@ -29,6 +29,10 @@ type Settings struct {
 	DataFetchEnabled bool   `yaml:"DATA_FETCH_ENABLED"`
 	WorkerCount      int    `yaml:"WORKER_COUNT"`
 	BundlrEnabled    bool   `yaml:"BUNDLR_ENABLED"`
+
+	PrivilegeJWKURL string `json:"PRIVILEGE_JWK_URL"`
+
+	VehicleNFTAddr string `json:"VEHICLE_NFT_ADDR"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader

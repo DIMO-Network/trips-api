@@ -11,8 +11,13 @@ import (
 
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/kafka"
+	"github.com/DIMO-Network/shared/middleware/privilegetoken"
 	_ "github.com/DIMO-Network/trips-api/docs"
+	"github.com/DIMO-Network/trips-api/internal/api"
 	"github.com/DIMO-Network/trips-api/internal/config"
+	"github.com/ethereum/go-ethereum/common"
+
+	jwtware "github.com/gofiber/contrib/jwt"
 
 	"github.com/DIMO-Network/trips-api/internal/database"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
@@ -119,9 +124,17 @@ func main() {
 
 		go serveMonitoring(settings.MonPort, &logger) //nolint
 
-		// handler := api.NewHandler(pgStore)
-		// vehicleGroup := app.Group("/vehicles/:id", jwtAuth)
-		// vehicleGroup.Get("/segments", handler.Segments)
+		privilegeJWT := jwtware.New(jwtware.Config{
+			JWKSetURLs: []string{settings.PrivilegeJWKURL},
+		})
+
+		privilege := privilegetoken.New(privilegetoken.Config{
+			Log: &logger,
+		})
+		vehicleAddr := common.HexToAddress(settings.VehicleNFTAddr)
+
+		handler := api.NewHandler(pgStore)
+		app.Get("/v1/vehicle/:tokenID/trips", privilegeJWT, privilege.OneOf(vehicleAddr, []int64{4}), handler.Segments)
 
 		go func() {
 			logger.Info().Msgf("Starting API server on port %s.", settings.Port)
