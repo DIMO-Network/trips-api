@@ -29,9 +29,9 @@ type Settings struct {
 	WorkerCount      int  `yaml:"WORKER_COUNT"`
 	BundlrEnabled    bool `yaml:"BUNDLR_ENABLED"`
 
-	PrivilegeJWKURL string `json:"PRIVILEGE_JWK_URL"`
+	PrivilegeJWKURL string `yaml:"PRIVILEGE_JWK_URL"`
 
-	VehicleNFTAddr string `json:"VEHICLE_NFT_ADDR"`
+	VehicleNFTAddr string `yaml:"VEHICLE_NFT_ADDR"`
 }
 
 // GetWriterDSN builds the connection string to the db writer - for now same as reader
