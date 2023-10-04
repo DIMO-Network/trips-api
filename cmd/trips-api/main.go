@@ -91,7 +91,7 @@ func main() {
 
 		kafka.Consume(ctx, kafka.Config{
 			Brokers: strings.Split(settings.KafkaBrokers, ","),
-			Topic:   settings.TripEventTopic,
+			Topic:   settings.EventTopic,
 			Group:   "vehicle-event",
 		}, controller.VehicleEvent, &logger)
 
