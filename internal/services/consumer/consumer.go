@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/DIMO-Network/shared"
@@ -42,7 +41,7 @@ type UserDeviceMintEvent struct {
 		ID string `json:"id"`
 	} `json:"device"`
 	NFT struct {
-		TokenID *big.Int `json:"tokenId"`
+		TokenID int `json:"tokenId"`
 	} `json:"nft"`
 }
 
@@ -108,11 +107,17 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent
 
 func (c *Consumer) VehicleEvent(ctx context.Context, event shared.CloudEvent[UserDeviceMintEvent]) error {
 	if event.Type == UserDeviceMintEventType {
-		return c.pg.StoreVehicle(ctx, event.Data.Device.ID, int(event.Data.NFT.TokenID.Int64()))
+		if err := c.pg.StoreVehicle(ctx, event.Data.Device.ID, event.Data.NFT.TokenID); err != nil {
+			return err
+		}
+
+		c.logger.Debug().Int("tokenId", event.Data.NFT.TokenID).Str("userDeviceId", event.Data.Device.ID).Msg("Id mapping stored.")
+		return nil
 	}
 	return nil
 }
 
 func pointToDB(p bundlr.Point) pgeo.Point {
+	// Longitude is the x-coordinate.
 	return pgeo.NewPoint(p.Longitude, p.Latitude)
 }

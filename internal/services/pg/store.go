@@ -41,5 +41,5 @@ func (s Store) StoreVehicle(ctx context.Context, userDeviceID string, tokenID in
 		TokenID:      tokenID,
 	}
 
-	return v.Insert(ctx, s.DB, boil.Infer())
+	return v.Upsert(ctx, s.DB, false, []string{models.VehicleColumns.TokenID}, boil.None(), boil.Infer())
 }
