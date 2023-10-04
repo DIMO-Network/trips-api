@@ -97,26 +97,6 @@ func main() {
 			Group:   "vehicle-event",
 		}, controller.VehicleEvent, vehicleEventChannel, &wg, &logger)
 
-		// jwtAuth := jwtware.New(
-		// 	jwtware.Config{
-		// 		JWKSetURLs: []string{settings.JWTKeySetURL},
-		// 		SuccessHandler: func(c *fiber.Ctx) error {
-		// 			token := c.Locals("user").(*jwt.Token)
-		// 			claims := token.Claims.(jwt.MapClaims)
-		// 			c.Locals(userIDContextKey, claims["sub"].(string))
-		// 			return c.Next()
-		// 		},
-		// 		ErrorHandler: func(c *fiber.Ctx, err error) error {
-		// 			return c.Status(fiber.StatusUnauthorized).JSON(
-		// 				map[string]any{
-		// 					"code":    401,
-		// 					"message": "Invalid or expired JWT.",
-		// 				},
-		// 			)
-		// 		},
-		// 	},
-		// )
-
 		logger.Info().Interface("settings", settings).Msg("Settings")
 
 		app := fiber.New()
