@@ -2,7 +2,7 @@ replicaCount: 1
 image:
   repository: dimozone/trips-api
   pullPolicy: IfNotPresent
-  tag: c38d2b4
+  tag: 30eb83d
 imagePullSecrets: []
 nameOverride: ''
 fullnameOverride: ''
@@ -39,9 +39,8 @@ env:
   DATA_FETCH_ENABLED: true
   WORKER_COUNT: 30
   BUNDLR_ENABLED: true
-
   PRIVILEGE_JWK_URL: http://dex-roles-rights.dev.svc.cluster.local:5556/keys
-  VEHICLE_NFT_ADDR: "0x90C4D6113Ec88dd4BDf12f26DB2b3998fd13A144"
+  VEHICLE_NFT_ADDR: '0x90C4D6113Ec88dd4BDf12f26DB2b3998fd13A144'
 service:
   type: ClusterIP
   ports:
