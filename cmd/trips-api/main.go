@@ -83,19 +83,17 @@ func main() {
 		vehicleEventChannel := make(chan *shared.CloudEvent[consumer.UserDeviceMintEvent])
 		var wg sync.WaitGroup
 
-		// start completed segment consumer
-		consumer.Start(ctx, kafka.Config{
+		kafka.Consume(ctx, kafka.Config{
 			Brokers: strings.Split(settings.KafkaBrokers, ","),
 			Topic:   settings.TripEventTopic,
 			Group:   "completed-segment",
-		}, controller.CompletedSegment, segmentChannel, &wg, &logger)
+		}, controller.CompletedSegment, &logger)
 
-		// start vehicle event consumer
-		consumer.Start(ctx, kafka.Config{
+		kafka.Consume(ctx, kafka.Config{
 			Brokers: strings.Split(settings.KafkaBrokers, ","),
-			Topic:   settings.EventTopic,
+			Topic:   settings.TripEventTopic,
 			Group:   "vehicle-event",
-		}, controller.VehicleEvent, vehicleEventChannel, &wg, &logger)
+		}, controller.VehicleEvent, &logger)
 
 		logger.Info().Interface("settings", settings.PrivilegeJWKURL).Msg("Settings")
 

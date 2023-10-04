@@ -5,11 +5,9 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
-	"sync"
 	"time"
 
 	"github.com/DIMO-Network/shared"
-	"github.com/DIMO-Network/shared/kafka"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
@@ -55,47 +53,7 @@ func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, l
 	return &Consumer{logger, es, pg, bundlrClient, dataFetchEnabled, workerCount, bundlrEnabled}
 }
 
-func Start[A any](ctx context.Context, config kafka.Config, handler func(context.Context, int, chan *shared.CloudEvent[A], *sync.WaitGroup, *zerolog.Logger), taskChan chan *shared.CloudEvent[A], wg *sync.WaitGroup, logger *zerolog.Logger) {
-	l := logger.With().Str("group", config.Group).Logger()
-
-	for i := 0; i < WorkerPoolSize; i++ {
-		l.Info().Msgf("starting worker %d", i+1)
-		wg.Add(1)
-		go handler(ctx, i, taskChan, wg, &l)
-	}
-
-	if err := kafka.Consume(ctx, config, func(ctx context.Context, evt *shared.CloudEvent[A]) error {
-		taskChan <- evt
-		return nil
-	}, &l); err != nil {
-		l.Err(err).Msg("unable to consume")
-		return
-	}
-}
-
-func (c *Consumer) CompletedSegment(ctx context.Context, workerNum int, taskChan chan *shared.CloudEvent[SegmentEvent], wg *sync.WaitGroup, logger *zerolog.Logger) {
-	defer func() {
-		wg.Done()
-		logger.Info().Int("workerNum", workerNum).Msg("shutdown")
-	}()
-
-	for {
-		select {
-		case event := <-taskChan:
-			if err := c.completedSegmentInner(ctx, workerNum, event, logger); err != nil {
-				logger.Err(err).Msg("Error processing segment completion.")
-				if ctx.Err() != nil {
-					return
-				}
-			}
-		case <-ctx.Done():
-			return
-		}
-	}
-
-}
-
-func (c *Consumer) completedSegmentInner(ctx context.Context, workerNum int, event *shared.CloudEvent[SegmentEvent], logger *zerolog.Logger) error {
+func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
 	v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB)
 	if err != nil {
 		return fmt.Errorf("failed to find vehicle %s: %w", event.Subject, err)
@@ -148,18 +106,11 @@ func (c *Consumer) completedSegmentInner(ctx context.Context, workerNum int, eve
 	return nil
 }
 
-func (c *Consumer) VehicleEvent(ctx context.Context, workerNum int, taskChan chan *shared.CloudEvent[UserDeviceMintEvent], wg *sync.WaitGroup, logger *zerolog.Logger) {
-	defer wg.Done()
-	for event := range taskChan {
-		if event.Type == UserDeviceMintEventType {
-			err := c.pg.StoreVehicle(ctx, event.Data.Device.ID, int(event.Data.NFT.TokenID.Int64()))
-			if err != nil {
-				logger.Err(err).Msg("unable to store vehicle information")
-			}
-		}
-		continue
+func (c *Consumer) VehicleEvent(ctx context.Context, event shared.CloudEvent[UserDeviceMintEvent]) error {
+	if event.Type == UserDeviceMintEventType {
+		return c.pg.StoreVehicle(ctx, event.Data.Device.ID, int(event.Data.NFT.TokenID.Int64()))
 	}
-	logger.Info().Int("workerNum", workerNum).Msg("shutdown")
+	return nil
 }
 
 func pointToDB(p bundlr.Point) pgeo.Point {
