@@ -3,6 +3,8 @@ package consumer
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -12,7 +14,6 @@ import (
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/rs/zerolog"
-	"github.com/segmentio/ksuid"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
@@ -28,10 +29,22 @@ type Consumer struct {
 	bundlrEnabled    bool
 }
 
+type Point struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
+type PointTime struct {
+	Point Point     `json:"point"`
+	Time  time.Time `json:"time"`
+}
+
 type SegmentEvent struct {
-	Start    bundlr.PointTime `json:"start"`
-	End      bundlr.PointTime `json:"end"`
-	DeviceID string           `json:"deviceID"`
+	Start     PointTime `json:"start"`
+	End       PointTime `json:"end"`
+	DeviceID  string    `json:"deviceID"`
+	Completed bool      `json:"completed"`
+	ID        string    `json:"id"`
 }
 
 type UserDeviceMintEvent struct {
@@ -52,10 +65,39 @@ func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, l
 	return &Consumer{logger, es, pg, bundlrClient, dataFetchEnabled, workerCount, bundlrEnabled}
 }
 
-func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
+func (c *Consumer) ProcessSegmentEvent(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
+	if event.Data.Completed {
+		return c.CompletedSegment(ctx, event)
+	}
+	return c.OngoingSegment(ctx, event)
+}
+
+func (c *Consumer) OngoingSegment(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
 	v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB)
 	if err != nil {
-		return fmt.Errorf("failed to find vehicle %s: %w", event.Subject, err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("failed to find vehicle %s: %w", event.Subject, err)
+		}
+		return err
+	}
+
+	segment := models.Trip{
+		ID:             event.Data.ID,
+		VehicleTokenID: v.TokenID,
+		StartTime:      event.Data.Start.Time,
+		StartPosition:  pointToDB(event.Data.Start.Point),
+	}
+
+	return segment.Insert(ctx, c.pg.DB, boil.Infer())
+}
+
+func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
+	segment, err := models.Trips(models.TripWhere.ID.EQ(event.Data.ID)).One(ctx, c.pg.DB)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("failed to find segment %s: %w", event.Data.ID, err)
+		}
+		return err
 	}
 
 	encryptionKey := make([]byte, 32)
@@ -63,15 +105,13 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent
 		return fmt.Errorf("couldn't produce random key: %w", err)
 	}
 
-	var bundlrID null.String
-
 	if c.dataFetchEnabled {
-		response, err := c.es.FetchData(ctx, event.Data.DeviceID, event.Data.Start.Time, event.Data.End.Time)
+		response, err := c.es.FetchData(ctx, event.Data.DeviceID, segment.StartTime, event.Data.End.Time)
 		if err != nil {
 			return fmt.Errorf("call to Elasticsearch failed: %w", err)
 		}
 
-		dataItem, err := c.bundlr.PrepareData(response, encryptionKey, v.TokenID, event.Data.Start.Time, event.Data.End.Time)
+		dataItem, err := c.bundlr.PrepareData(response, encryptionKey, segment.VehicleTokenID, segment.StartTime, event.Data.End.Time)
 		if err != nil {
 			return fmt.Errorf("assembly for Bundlr failed: %w", err)
 		}
@@ -82,27 +122,15 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent
 			}
 		}
 
-		bundlrID = null.StringFrom(dataItem.Id.Base64())
-
-		c.logger.Info().Msgf("https://devnet.bundlr.network/%s", dataItem.Id.Base64())
+		segment.BundlrID = null.StringFrom(dataItem.Id.Base64())
+		c.logger.Info().Msgf("https://devnet.bundlr.network/%s", segment.BundlrID.String)
 	}
 
-	segment := models.Trip{
-		VehicleTokenID: v.TokenID,
-		EncryptionKey:  null.BytesFrom(encryptionKey),
-		ID:             ksuid.New().String(),
-		StartTime:      event.Data.Start.Time,
-		EndTime:        null.TimeFrom(event.Data.End.Time),
-		StartPosition:  pointToDB(event.Data.Start.Point),
-		EndPosition:    pgeo.NewNullPoint(pointToDB(event.Data.End.Point), true),
-		BundlrID:       bundlrID,
-	}
-
-	if err := segment.Insert(ctx, c.pg.DB, boil.Infer()); err != nil {
-		return fmt.Errorf("failed to insert new trip: %w", err)
-	}
-
-	return nil
+	segment.EncryptionKey = null.BytesFrom(encryptionKey)
+	segment.EndTime = null.TimeFrom(event.Data.End.Time)
+	segment.EndPosition = pgeo.NewNullPoint(pointToDB(event.Data.End.Point), true)
+	_, err = segment.Update(ctx, c.pg.DB, boil.Whitelist(models.TripColumns.EncryptionKey, models.TripColumns.EndTime, models.TripColumns.EndPosition, models.TripColumns.BundlrID))
+	return err
 }
 
 func (c *Consumer) VehicleEvent(ctx context.Context, event shared.CloudEvent[UserDeviceMintEvent]) error {
@@ -117,7 +145,7 @@ func (c *Consumer) VehicleEvent(ctx context.Context, event shared.CloudEvent[Use
 	return nil
 }
 
-func pointToDB(p bundlr.Point) pgeo.Point {
+func pointToDB(p Point) pgeo.Point {
 	// Longitude is the x-coordinate.
 	return pgeo.NewPoint(p.Longitude, p.Latitude)
 }

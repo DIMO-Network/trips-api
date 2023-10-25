@@ -25,16 +25,6 @@ type Client struct {
 	currency    string
 }
 
-type Point struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
-type PointTime struct {
-	Point Point     `json:"point"`
-	Time  time.Time `json:"time"`
-}
-
 func New(settings *config.Settings) (*Client, error) {
 	signer, err := bundlr.NewEthereumSigner("0x" + settings.BundlrPrivateKey)
 	if err != nil {
