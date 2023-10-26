@@ -2,9 +2,8 @@ package pg
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
 
+	"github.com/DIMO-Network/shared/db"
 	"github.com/DIMO-Network/trips-api/internal/config"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -12,26 +11,14 @@ import (
 
 // Store connected to postgres db containing trip information and validates user
 type Store struct {
-	DB *sql.DB
+	DB db.Store
 }
 
 func New(settings *config.Settings) (*Store, error) {
-	psqlInfo := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		settings.DBHost,
-		settings.DBPort,
-		settings.DBUser,
-		settings.DBPassword,
-		settings.DBName,
-	)
-
-	db, err := sql.Open("postgres", psqlInfo)
-	if err != nil {
-		return nil, err
-	}
+	dbs := db.NewDbConnectionFromSettings(context.Background(), &settings.DB, true)
 
 	return &Store{
-		DB: db,
+		DB: dbs,
 	}, nil
 }
 
@@ -41,5 +28,5 @@ func (s Store) StoreVehicle(ctx context.Context, userDeviceID string, tokenID in
 		TokenID:      tokenID,
 	}
 
-	return v.Upsert(ctx, s.DB, false, []string{models.VehicleColumns.TokenID}, boil.None(), boil.Infer())
+	return v.Upsert(ctx, s.DB.DBS().Writer, false, []string{models.VehicleColumns.TokenID}, boil.None(), boil.Infer())
 }

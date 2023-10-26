@@ -53,7 +53,7 @@ func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, l
 }
 
 func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
-	v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB)
+	v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB.DBS().Reader)
 	if err != nil {
 		return fmt.Errorf("failed to find vehicle %s: %w", event.Subject, err)
 	}
@@ -98,7 +98,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent
 		BundlrID:       bundlrID,
 	}
 
-	if err := segment.Insert(ctx, c.pg.DB, boil.Infer()); err != nil {
+	if err := segment.Insert(ctx, c.pg.DB.DBS().Writer, boil.Infer()); err != nil {
 		return fmt.Errorf("failed to insert new trip: %w", err)
 	}
 

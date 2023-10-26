@@ -41,7 +41,7 @@ func (h *Handler) Segments(c *fiber.Ctx) error {
 			qm.OrderBy(models.TripColumns.EndTime+" DESC"),
 			qm.Limit(maxPageSize),
 		),
-	).One(c.Context(), h.pg.DB)
+	).One(c.Context(), h.pg.DB.DBS().Reader)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fiber.NewError(fiber.StatusNotFound, "No vehicle with that token id.")
