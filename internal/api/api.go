@@ -43,7 +43,7 @@ func (h *Handler) Segments(c *fiber.Ctx) error {
 
 	totalCount, err := models.Trips(
 		models.TripWhere.VehicleTokenID.EQ(tokenID),
-	).Count(c.Context(), h.pg.DB)
+	).Count(c.Context(), h.pg.DB.DBS().Reader)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
