@@ -73,7 +73,7 @@ func (c *Consumer) ProcessSegmentEvent(ctx context.Context, event shared.CloudEv
 }
 
 func (c *Consumer) OngoingSegment(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
-	v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB)
+	v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB.DBS().Reader)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("failed to find vehicle %s: %w", event.Subject, err)
@@ -88,11 +88,11 @@ func (c *Consumer) OngoingSegment(ctx context.Context, event shared.CloudEvent[S
 		StartPosition:  pointToDB(event.Data.Start.Point),
 	}
 
-	return segment.Insert(ctx, c.pg.DB, boil.Infer())
+	return segment.Insert(ctx, c.pg.DB.DBS().Writer, boil.Infer())
 }
 
 func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
-	segment, err := models.Trips(models.TripWhere.ID.EQ(event.Data.ID)).One(ctx, c.pg.DB)
+	segment, err := models.Trips(models.TripWhere.ID.EQ(event.Data.ID)).One(ctx, c.pg.DB.DBS().Reader)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("failed to find segment %s: %w", event.Data.ID, err)
@@ -129,7 +129,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent
 	segment.EncryptionKey = null.BytesFrom(encryptionKey)
 	segment.EndTime = null.TimeFrom(event.Data.End.Time)
 	segment.EndPosition = pgeo.NewNullPoint(pointToDB(event.Data.End.Point), true)
-	_, err = segment.Update(ctx, c.pg.DB, boil.Whitelist(models.TripColumns.EncryptionKey, models.TripColumns.EndTime, models.TripColumns.EndPosition, models.TripColumns.BundlrID))
+	_, err = segment.Update(ctx, c.pg.DB.DBS().Writer, boil.Whitelist(models.TripColumns.EncryptionKey, models.TripColumns.EndTime, models.TripColumns.EndPosition, models.TripColumns.BundlrID))
 	return err
 }
 
