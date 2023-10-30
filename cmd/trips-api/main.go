@@ -87,7 +87,7 @@ func main() {
 			Brokers: strings.Split(settings.KafkaBrokers, ","),
 			Topic:   settings.TripEventTopic,
 			Group:   "completed-segment",
-		}, controller.CompletedSegment, &logger); err != nil {
+		}, controller.ProcessSegmentEvent, &logger); err != nil {
 			logger.Fatal().Err(err).Msg("Couldn't start completed segment consumer.")
 		}
 
