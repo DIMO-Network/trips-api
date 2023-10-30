@@ -40,11 +40,11 @@ type PointTime struct {
 }
 
 type SegmentEvent struct {
+	ID        string    `json:"id"`
+	DeviceID  string    `json:"deviceId"`
+	Completed bool      `json:"completed"`
 	Start     PointTime `json:"start"`
 	End       PointTime `json:"end"`
-	DeviceID  string    `json:"deviceID"`
-	Completed bool      `json:"completed"`
-	ID        string    `json:"id"`
 }
 
 type UserDeviceMintEvent struct {
@@ -58,7 +58,6 @@ type UserDeviceMintEvent struct {
 	} `json:"nft"`
 }
 
-const WorkerPoolSize = 20
 const UserDeviceMintEventType = "com.dimo.zone.device.mint"
 
 func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, logger *zerolog.Logger, dataFetchEnabled bool, workerCount int, bundlrEnabled bool) *Consumer {
