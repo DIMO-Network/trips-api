@@ -16,7 +16,6 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
 
 type Consumer struct {
@@ -29,22 +28,16 @@ type Consumer struct {
 	bundlrEnabled    bool
 }
 
-type Point struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-}
-
-type PointTime struct {
-	Point Point     `json:"point"`
-	Time  time.Time `json:"time"`
+type Endpoint struct {
+	Time time.Time `json:"time"`
 }
 
 type SegmentEvent struct {
-	ID        string    `json:"id"`
-	DeviceID  string    `json:"deviceId"`
-	Completed bool      `json:"completed"`
-	Start     PointTime `json:"start"`
-	End       PointTime `json:"end"`
+	ID        string   `json:"id"`
+	DeviceID  string   `json:"deviceId"`
+	Completed bool     `json:"completed"`
+	Start     Endpoint `json:"start"`
+	End       Endpoint `json:"end"`
 }
 
 type UserDeviceMintEvent struct {
@@ -140,9 +133,4 @@ func (c *Consumer) VehicleEvent(ctx context.Context, event shared.CloudEvent[Use
 		return nil
 	}
 	return nil
-}
-
-func pointToDB(p Point) pgeo.Point {
-	// Longitude is the x-coordinate.
-	return pgeo.NewPoint(p.Longitude, p.Latitude)
 }
