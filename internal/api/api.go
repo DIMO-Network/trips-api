@@ -79,17 +79,9 @@ func (h *Handler) Segments(c *fiber.Ctx) error {
 			ID: t.ID,
 			Start: PointTime{
 				Time: t.StartTime,
-				Location: Location{
-					Latitude:  t.StartPosition.Y,
-					Longitude: t.StartPosition.X,
-				},
 			},
 			End: PointTime{
 				Time: t.EndTime.Time,
-				Location: Location{
-					Latitude:  t.EndPosition.Y,
-					Longitude: t.EndPosition.X,
-				},
 			},
 		}
 	}

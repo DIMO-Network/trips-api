@@ -84,7 +84,6 @@ func (c *Consumer) OngoingSegment(ctx context.Context, event shared.CloudEvent[S
 		ID:             event.Data.ID,
 		VehicleTokenID: v.TokenID,
 		StartTime:      event.Data.Start.Time,
-		StartPosition:  pointToDB(event.Data.Start.Point),
 	}
 
 	return segment.Insert(ctx, c.pg.DB.DBS().Writer, boil.Infer())
@@ -127,8 +126,7 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent
 
 	segment.EncryptionKey = null.BytesFrom(encryptionKey)
 	segment.EndTime = null.TimeFrom(event.Data.End.Time)
-	segment.EndPosition = pgeo.NewNullPoint(pointToDB(event.Data.End.Point), true)
-	_, err = segment.Update(ctx, c.pg.DB.DBS().Writer, boil.Whitelist(models.TripColumns.EncryptionKey, models.TripColumns.EndTime, models.TripColumns.EndPosition, models.TripColumns.BundlrID))
+	_, err = segment.Update(ctx, c.pg.DB.DBS().Writer, boil.Whitelist(models.TripColumns.EncryptionKey, models.TripColumns.EndTime, models.TripColumns.BundlrID))
 	return err
 }
 
