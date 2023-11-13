@@ -5,14 +5,22 @@ info:
   title: DIMO Segment API
   version: "1.0"
 paths:
-  /devices/:id/segments:
+  /vehicle/:tokenID/trips:
     get:
-      description: details for all segments associated with device
+      description: Lists vehicle trips.
+      parameters:
+      - description: Vehicle token id
+        in: path
+        name: tokenID
+        required: true
+        type: integer
+      - description: Page of trips to retrieve. Defaults to 1.
+        in: query
+        name: page
+        type: integer
       produces:
       - application/json
       responses: {}
       security:
       - BearerAuth: []
-      tags:
-      - user-segments
 swagger: "2.0"

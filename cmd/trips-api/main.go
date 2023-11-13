@@ -102,7 +102,7 @@ func main() {
 		logger.Info().Interface("settings", settings.PrivilegeJWKURL).Msg("Settings")
 
 		app := fiber.New()
-		app.Get("/swagger/*", swagger.HandlerDefault)
+		app.Get("/v1/swagger/*", swagger.HandlerDefault)
 
 		go serveMonitoring(settings.MonPort, &logger) //nolint
 
@@ -116,7 +116,7 @@ func main() {
 		vehicleAddr := common.HexToAddress(settings.VehicleNFTAddr)
 
 		handler := api.NewHandler(pgStore)
-		app.Get("/v1/vehicle/:tokenID/trips", privilegeJWT, privilege.OneOf(vehicleAddr, []int64{4}), handler.Segments)
+		app.Get("/v1/vehicle/:tokenID/trips", privilegeJWT, privilege.OneOf(vehicleAddr, []int64{4}), handler.GetVehicleTrips)
 
 		go func() {
 			logger.Info().Msgf("Starting API server on port %s.", settings.Port)

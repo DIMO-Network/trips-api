@@ -22,13 +22,14 @@ func NewHandler(pgStore *pg_store.Store) *Handler {
 
 const pageSize = 100
 
-// Segments godoc
-// @Description details for all segments associated with vehicles
-// @Tags        vehicles-segments
+// GetVehicleTrips godoc
+// @Description Lists vehicle trips.
 // @Produce     json
 // @Security    BearerAuth
+// @Param tokenID path int true "Vehicle token id"
+// @Param page query int false "Page of trips to retrieve. Defaults to 1."
 // @Router      /vehicle/:tokenID/trips [get]
-func (h *Handler) Segments(c *fiber.Ctx) error {
+func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 	rawTokenID := c.Params("tokenID")
 	tokenID, err := strconv.Atoi(rawTokenID)
 	if err != nil {
@@ -118,11 +119,5 @@ type VehicleTripResp struct {
 }
 
 type PointTime struct {
-	Time     time.Time `json:"time"`
-	Location Location  `json:"location"`
-}
-
-type Location struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
+	Time time.Time `json:"time"`
 }
