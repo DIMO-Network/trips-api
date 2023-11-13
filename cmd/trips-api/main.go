@@ -34,11 +34,11 @@ import (
 
 // const userIDContextKey = "userID"
 
-// @title                      DIMO Segment API
-// @version                    1.0
-// @description segments
-// @BasePath /
-// @name Authorization
+//	@title			DIMO Segment API
+//	@version		1.0
+//	@description	segments
+//	@BasePath		/
+//	@name			Authorization
 func main() {
 	ctx := context.Background()
 	logger := zerolog.New(os.Stdout).With().Timestamp().Str("app", "trips-api").Logger()

@@ -22,13 +22,15 @@ func NewHandler(pgStore *pg_store.Store) *Handler {
 
 const pageSize = 100
 
-// GetVehicleTrips godoc
-// @Description Lists vehicle trips.
-// @Produce     json
-// @Security    BearerAuth
-// @Param tokenID path int true "Vehicle token id"
-// @Param page query int false "Page of trips to retrieve. Defaults to 1."
-// @Router      /vehicle/:tokenID/trips [get]
+// GetVehicleTrips returns a page of the given vehicle's trips.
+//
+//	@Description	Lists vehicle trips.
+//	@Produce		json
+//	@Security		BearerAuth
+//	@Param			tokenID	path		int	true	"Vehicle token id"
+//	@Param			page	query		int	false	"Page of trips to retrieve. Defaults to 1."
+//	@Success		200		{object}	api.VehicleTripsResp
+//	@Router			/vehicle/:tokenID/trips [get]
 func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 	rawTokenID := c.Params("tokenID")
 	tokenID, err := strconv.Atoi(rawTokenID)

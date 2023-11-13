@@ -1,4 +1,30 @@
 basePath: /
+definitions:
+  internal_api.PointTime:
+    properties:
+      time:
+        type: string
+    type: object
+  internal_api.VehicleTripResp:
+    properties:
+      end:
+        $ref: '#/definitions/internal_api.PointTime'
+      id:
+        type: string
+      start:
+        $ref: '#/definitions/internal_api.PointTime'
+    type: object
+  internal_api.VehicleTripsResp:
+    properties:
+      currentPage:
+        type: integer
+      totalPages:
+        type: integer
+      trips:
+        items:
+          $ref: '#/definitions/internal_api.VehicleTripResp'
+        type: array
+    type: object
 info:
   contact: {}
   description: segments
@@ -20,7 +46,11 @@ paths:
         type: integer
       produces:
       - application/json
-      responses: {}
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.VehicleTripsResp'
       security:
       - BearerAuth: []
 swagger: "2.0"
