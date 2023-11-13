@@ -77,16 +77,21 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 		TotalPages:  int(math.Ceil(float64(totalCount) / pageSize)),
 	}
 
-	for i, t := range v.R.VehicleTokenTrips {
-		out.Trips[i] = VehicleTripResp{
-			ID: t.ID,
-			Start: PointTime{
-				Time: t.StartTime,
-			},
-			End: PointTime{
-				Time: t.EndTime.Time,
+	for i, tripRow := range v.R.VehicleTokenTrips {
+		tripOut := VehicleTripResp{
+			ID: tripRow.ID,
+			Start: Endpoint{
+				Time: tripRow.StartTime,
 			},
 		}
+
+		if tripRow.EndTime.Valid {
+			tripOut.End = &Endpoint{
+				Time: tripRow.EndTime.Time,
+			}
+		}
+
+		out.Trips[i] = tripOut
 	}
 
 	return c.JSON(out)
@@ -116,10 +121,10 @@ type VehicleTripsResp struct {
 
 type VehicleTripResp struct {
 	ID    string    `json:"id" example:"2Y83IHPItgk0uHD7hybGnA776Bo"`
-	Start PointTime `json:"start"`
-	End   PointTime `json:"end"`
+	Start Endpoint  `json:"start"`
+	End   *Endpoint `json:"end"`
 }
 
-type PointTime struct {
+type Endpoint struct {
 	Time time.Time `json:"time" example:"2023-05-04T09:00:00Z"`
 }

@@ -1,6 +1,6 @@
 basePath: /
 definitions:
-  internal_api.PointTime:
+  internal_api.Endpoint:
     properties:
       time:
         example: "2023-05-04T09:00:00Z"
@@ -9,12 +9,12 @@ definitions:
   internal_api.VehicleTripResp:
     properties:
       end:
-        $ref: '#/definitions/internal_api.PointTime'
+        $ref: '#/definitions/internal_api.Endpoint'
       id:
         example: 2Y83IHPItgk0uHD7hybGnA776Bo
         type: string
       start:
-        $ref: '#/definitions/internal_api.PointTime'
+        $ref: '#/definitions/internal_api.Endpoint'
     type: object
   internal_api.VehicleTripsResp:
     properties:
