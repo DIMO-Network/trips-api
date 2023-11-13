@@ -110,16 +110,16 @@ type Params struct {
 
 type VehicleTripsResp struct {
 	Trips       []VehicleTripResp `json:"trips"`
-	TotalPages  int               `json:"totalPages"`
-	CurrentPage int               `json:"currentPage"`
+	TotalPages  int               `json:"totalPages" example:"1"`
+	CurrentPage int               `json:"currentPage" example:"1"`
 }
 
 type VehicleTripResp struct {
-	ID    string    `json:"id"`
+	ID    string    `json:"id" example:"2Y83IHPItgk0uHD7hybGnA776Bo"`
 	Start PointTime `json:"start"`
 	End   PointTime `json:"end"`
 }
 
 type PointTime struct {
-	Time time.Time `json:"time"`
+	Time time.Time `json:"time" example:"2023-05-04T09:00:00Z"`
 }

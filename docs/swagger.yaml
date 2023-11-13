@@ -3,6 +3,7 @@ definitions:
   internal_api.PointTime:
     properties:
       time:
+        example: "2023-05-04T09:00:00Z"
         type: string
     type: object
   internal_api.VehicleTripResp:
@@ -10,6 +11,7 @@ definitions:
       end:
         $ref: '#/definitions/internal_api.PointTime'
       id:
+        example: 2Y83IHPItgk0uHD7hybGnA776Bo
         type: string
       start:
         $ref: '#/definitions/internal_api.PointTime'
@@ -17,8 +19,10 @@ definitions:
   internal_api.VehicleTripsResp:
     properties:
       currentPage:
+        example: 1
         type: integer
       totalPages:
+        example: 1
         type: integer
       trips:
         items:
