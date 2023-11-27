@@ -57,4 +57,9 @@ paths:
             $ref: '#/definitions/internal_api.VehicleTripsResp'
       security:
       - BearerAuth: []
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

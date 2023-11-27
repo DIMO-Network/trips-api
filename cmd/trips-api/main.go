@@ -38,7 +38,9 @@ import (
 // @version		1.0
 // @description	segments
 // @BasePath		/v1
-// @name			Authorization
+// @securityDefinitions.apikey BearerAuth
+// @in                         header
+// @name                       Authorization
 func main() {
 	ctx := context.Background()
 	logger := zerolog.New(os.Stdout).With().Timestamp().Str("app", "trips-api").Logger()
