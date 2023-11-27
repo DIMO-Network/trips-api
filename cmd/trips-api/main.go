@@ -34,11 +34,11 @@ import (
 
 // const userIDContextKey = "userID"
 
-//	@title			DIMO Segment API
-//	@version		1.0
-//	@description	segments
-//	@BasePath		/
-//	@name			Authorization
+// @title			DIMO Segment API
+// @version		1.0
+// @description	segments
+// @BasePath		/v1
+// @name			Authorization
 func main() {
 	ctx := context.Background()
 	logger := zerolog.New(os.Stdout).With().Timestamp().Str("app", "trips-api").Logger()
@@ -102,7 +102,8 @@ func main() {
 		logger.Info().Interface("settings", settings.PrivilegeJWKURL).Msg("Settings")
 
 		app := fiber.New()
-		app.Get("/v1/swagger/*", swagger.HandlerDefault)
+		v1 := app.Group("/v1")
+		v1.Get("/swagger/*", swagger.HandlerDefault)
 
 		go serveMonitoring(settings.MonPort, &logger) //nolint
 
@@ -116,7 +117,7 @@ func main() {
 		vehicleAddr := common.HexToAddress(settings.VehicleNFTAddr)
 
 		handler := api.NewHandler(pgStore)
-		app.Get("/v1/vehicle/:tokenID/trips", privilegeJWT, privilege.OneOf(vehicleAddr, []int64{4}), handler.GetVehicleTrips)
+		v1.Get("/vehicle/:tokenID/trips", privilegeJWT, privilege.OneOf(vehicleAddr, []int64{4}), handler.GetVehicleTrips)
 
 		go func() {
 			logger.Info().Msgf("Starting API server on port %s.", settings.Port)
