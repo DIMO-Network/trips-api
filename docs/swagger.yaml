@@ -35,13 +35,13 @@ info:
   title: DIMO Segment API
   version: "1.0"
 paths:
-  /vehicle/:tokenID/trips:
+  /vehicle/{tokenId}/trips:
     get:
       description: Lists vehicle trips.
       parameters:
       - description: Vehicle token id
         in: path
-        name: tokenID
+        name: tokenId
         required: true
         type: integer
       - description: Page of trips to retrieve. Defaults to 1.
