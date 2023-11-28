@@ -2,7 +2,7 @@ replicaCount: 1
 image:
   repository: dimozone/trips-api
   pullPolicy: IfNotPresent
-  tag: '3e24421'
+  tag: e76efcc
 imagePullSecrets: []
 nameOverride: ''
 fullnameOverride: ''
