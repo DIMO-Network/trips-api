@@ -26,3 +26,5 @@ Trip opening:
 ```
 goose -dir migrations create <migration_name> sql
 ```
+
+GitHub? Hello?
