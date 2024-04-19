@@ -13,6 +13,7 @@ import (
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -47,7 +48,8 @@ type UserDeviceMintEvent struct {
 		ID string `json:"id"`
 	} `json:"device"`
 	NFT struct {
-		TokenID int `json:"tokenId"`
+		TokenID int            `json:"tokenId"`
+		Owner   common.Address `json:"address"`
 	} `json:"nft"`
 }
 
@@ -125,7 +127,13 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent
 
 func (c *Consumer) VehicleEvent(ctx context.Context, event shared.CloudEvent[UserDeviceMintEvent]) error {
 	if event.Type == UserDeviceMintEventType {
-		if err := c.pg.StoreVehicle(ctx, event.Data.Device.ID, event.Data.NFT.TokenID); err != nil {
+		veh := models.Vehicle{
+			UserDeviceID: event.Data.Device.ID,
+			TokenID:      event.Data.NFT.TokenID,
+			OwnerAddress: null.BytesFrom(event.Data.NFT.Owner.Bytes()),
+		}
+
+		if err := veh.Insert(ctx, c.pg.DB.DBS().Writer, boil.Infer()); err != nil {
 			return err
 		}
 
