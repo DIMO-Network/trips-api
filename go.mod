@@ -153,6 +153,7 @@ require (
 	github.com/pressly/goose v2.7.0+incompatible
 	github.com/rs/zerolog v1.31.0
 	github.com/segmentio/ksuid v1.0.4
+	github.com/umahmood/haversine v0.0.0-20151105152445-808ab04add26
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/volatiletech/sqlboiler/v4 v4.15.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect

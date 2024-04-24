@@ -4,12 +4,13 @@ import (
 	"database/sql"
 	"math"
 	"strconv"
-	"time"
 
+	"github.com/DIMO-Network/trips-api/internal/helper"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
 
 type Handler struct {
@@ -51,17 +52,14 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	mods := []qm.QueryMod{
-		qm.OrderBy(models.TripColumns.EndTime + " DESC"),
-		qm.Limit(pageSize),
-		qm.Offset((p.Page - 1) * pageSize),
-	}
-
 	v, err := models.Vehicles(
 		models.VehicleWhere.TokenID.EQ(tokenID),
 		qm.Load(
 			models.VehicleRels.VehicleTokenTrips,
-			mods...,
+			qm.Where(models.TripColumns.EndTime+" IS NOT NULL"),
+			qm.OrderBy(models.TripColumns.EndTime+" ASC"),
+			qm.Limit(pageSize),
+			qm.Offset((p.Page-1)*pageSize),
 		),
 	).One(c.Context(), h.pg.DB.DBS().Reader)
 	if err != nil {
@@ -71,30 +69,33 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	out := VehicleTripsResp{
-		Trips:       make([]VehicleTripResp, len(v.R.VehicleTokenTrips)),
+	resp := helper.VehicleTrips{
+		Trips:       make([]*helper.TripDetails, len(v.R.VehicleTokenTrips)),
 		CurrentPage: p.Page,
 		TotalPages:  int(math.Ceil(float64(totalCount) / pageSize)),
 	}
 
-	for i, tripRow := range v.R.VehicleTokenTrips {
-		tripOut := VehicleTripResp{
-			ID: tripRow.ID,
-			Start: Endpoint{
-				Time: tripRow.StartTime,
+	var prevTripEnd pgeo.NullPoint
+	for i, trp := range v.R.VehicleTokenTrips {
+		resp.Trips[i] = &helper.TripDetails{
+			TripID: trp.ID,
+			Start: helper.TripEvent{
+				Actual: helper.PointTime{
+					Time: trp.StartTime,
+				},
+			},
+			End: helper.TripEvent{
+				Actual: helper.PointTime{
+					Time: trp.EndTime.Time,
+				},
 			},
 		}
 
-		if tripRow.EndTime.Valid {
-			tripOut.End = &Endpoint{
-				Time: tripRow.EndTime.Time,
-			}
-		}
-
-		out.Trips[i] = tripOut
+		resp.Trips[i] = helper.TripGeos(trp, resp.Trips[i], prevTripEnd)
+		prevTripEnd = trp.EndPosition
 	}
 
-	return c.JSON(out)
+	return c.JSON(resp)
 }
 
 func validateQueryParams(p *Params, c *fiber.Ctx) error {
@@ -111,20 +112,4 @@ func validateQueryParams(p *Params, c *fiber.Ctx) error {
 
 type Params struct {
 	Page int `json:"page"`
-}
-
-type VehicleTripsResp struct {
-	Trips       []VehicleTripResp `json:"trips"`
-	TotalPages  int               `json:"totalPages" example:"1"`
-	CurrentPage int               `json:"currentPage" example:"1"`
-}
-
-type VehicleTripResp struct {
-	ID    string    `json:"id" example:"2Y83IHPItgk0uHD7hybGnA776Bo"`
-	Start Endpoint  `json:"start"`
-	End   *Endpoint `json:"end"`
-}
-
-type Endpoint struct {
-	Time time.Time `json:"time" example:"2023-05-04T09:00:00Z"`
 }
