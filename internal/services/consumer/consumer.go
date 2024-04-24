@@ -16,6 +16,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
 
 type Consumer struct {
@@ -29,7 +30,9 @@ type Consumer struct {
 }
 
 type Endpoint struct {
-	Time time.Time `json:"time"`
+	Time      time.Time `json:"time"`
+	Latitude  float64   `json:"latitude"`
+	Longitude float64   `json:"longitude"`
 }
 
 type SegmentEvent struct {
@@ -59,12 +62,12 @@ func New(es *es_store.Client, bundlrClient *bundlr.Client, pg *pg_store.Store, l
 
 func (c *Consumer) ProcessSegmentEvent(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
 	if event.Data.Completed {
-		return c.CompletedSegment(ctx, event)
+		return c.CompleteSegment(ctx, event)
 	}
-	return c.OngoingSegment(ctx, event)
+	return c.BeginSegment(ctx, event)
 }
 
-func (c *Consumer) OngoingSegment(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
+func (c *Consumer) BeginSegment(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
 	v, err := models.Vehicles(models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID)).One(ctx, c.pg.DB.DBS().Reader)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -77,12 +80,13 @@ func (c *Consumer) OngoingSegment(ctx context.Context, event shared.CloudEvent[S
 		ID:             event.Data.ID,
 		VehicleTokenID: v.TokenID,
 		StartTime:      event.Data.Start.Time,
+		StartPosition:  pgeo.NewNullPoint(pointToDB(event.Data.Start.Longitude, event.Data.Start.Latitude), true),
 	}
 
 	return segment.Insert(ctx, c.pg.DB.DBS().Writer, boil.Infer())
 }
 
-func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
+func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
 	segment, err := models.Trips(models.TripWhere.ID.EQ(event.Data.ID)).One(ctx, c.pg.DB.DBS().Reader)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -119,7 +123,8 @@ func (c *Consumer) CompletedSegment(ctx context.Context, event shared.CloudEvent
 
 	segment.EncryptionKey = null.BytesFrom(encryptionKey)
 	segment.EndTime = null.TimeFrom(event.Data.End.Time)
-	_, err = segment.Update(ctx, c.pg.DB.DBS().Writer, boil.Whitelist(models.TripColumns.EncryptionKey, models.TripColumns.EndTime, models.TripColumns.BundlrID))
+	segment.EndPosition = pgeo.NewNullPoint(pointToDB(event.Data.End.Longitude, event.Data.End.Latitude), true)
+	_, err = segment.Update(ctx, c.pg.DB.DBS().Writer, boil.Whitelist(models.TripColumns.EncryptionKey, models.TripColumns.EndTime, models.TripColumns.BundlrID, models.TripColumns.EndPosition))
 	return err
 }
 
@@ -133,4 +138,9 @@ func (c *Consumer) VehicleEvent(ctx context.Context, event shared.CloudEvent[Use
 		return nil
 	}
 	return nil
+}
+
+func pointToDB(longitude, latitude float64) pgeo.Point {
+	// Longitude is the x-coordinate.
+	return pgeo.NewPoint(latitude, longitude)
 }
