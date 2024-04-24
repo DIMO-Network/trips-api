@@ -30,6 +30,7 @@ type Trip struct {
 	VehicleTokenID int         `boil:"vehicle_token_id" json:"vehicle_token_id" toml:"vehicle_token_id" yaml:"vehicle_token_id"`
 	EncryptionKey  null.Bytes  `boil:"encryption_key" json:"encryption_key,omitempty" toml:"encryption_key" yaml:"encryption_key,omitempty"`
 	BundlrID       null.String `boil:"bundlr_id" json:"bundlr_id,omitempty" toml:"bundlr_id" yaml:"bundlr_id,omitempty"`
+	OwnerAddress   null.Bytes  `boil:"owner_address" json:"owner_address,omitempty" toml:"owner_address" yaml:"owner_address,omitempty"`
 
 	R *tripR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L tripL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -42,6 +43,7 @@ var TripColumns = struct {
 	VehicleTokenID string
 	EncryptionKey  string
 	BundlrID       string
+	OwnerAddress   string
 }{
 	ID:             "id",
 	StartTime:      "start_time",
@@ -49,6 +51,7 @@ var TripColumns = struct {
 	VehicleTokenID: "vehicle_token_id",
 	EncryptionKey:  "encryption_key",
 	BundlrID:       "bundlr_id",
+	OwnerAddress:   "owner_address",
 }
 
 var TripTableColumns = struct {
@@ -58,6 +61,7 @@ var TripTableColumns = struct {
 	VehicleTokenID string
 	EncryptionKey  string
 	BundlrID       string
+	OwnerAddress   string
 }{
 	ID:             "trips.id",
 	StartTime:      "trips.start_time",
@@ -65,6 +69,7 @@ var TripTableColumns = struct {
 	VehicleTokenID: "trips.vehicle_token_id",
 	EncryptionKey:  "trips.encryption_key",
 	BundlrID:       "trips.bundlr_id",
+	OwnerAddress:   "trips.owner_address",
 }
 
 // Generated where
@@ -229,6 +234,7 @@ var TripWhere = struct {
 	VehicleTokenID whereHelperint
 	EncryptionKey  whereHelpernull_Bytes
 	BundlrID       whereHelpernull_String
+	OwnerAddress   whereHelpernull_Bytes
 }{
 	ID:             whereHelperstring{field: "\"trips_api\".\"trips\".\"id\""},
 	StartTime:      whereHelpertime_Time{field: "\"trips_api\".\"trips\".\"start_time\""},
@@ -236,6 +242,7 @@ var TripWhere = struct {
 	VehicleTokenID: whereHelperint{field: "\"trips_api\".\"trips\".\"vehicle_token_id\""},
 	EncryptionKey:  whereHelpernull_Bytes{field: "\"trips_api\".\"trips\".\"encryption_key\""},
 	BundlrID:       whereHelpernull_String{field: "\"trips_api\".\"trips\".\"bundlr_id\""},
+	OwnerAddress:   whereHelpernull_Bytes{field: "\"trips_api\".\"trips\".\"owner_address\""},
 }
 
 // TripRels is where relationship names are stored.
@@ -266,9 +273,9 @@ func (r *tripR) GetVehicleToken() *Vehicle {
 type tripL struct{}
 
 var (
-	tripAllColumns            = []string{"id", "start_time", "end_time", "vehicle_token_id", "encryption_key", "bundlr_id"}
+	tripAllColumns            = []string{"id", "start_time", "end_time", "vehicle_token_id", "encryption_key", "bundlr_id", "owner_address"}
 	tripColumnsWithoutDefault = []string{"id", "start_time", "vehicle_token_id"}
-	tripColumnsWithDefault    = []string{"end_time", "encryption_key", "bundlr_id"}
+	tripColumnsWithDefault    = []string{"end_time", "encryption_key", "bundlr_id", "owner_address"}
 	tripPrimaryKeyColumns     = []string{"id"}
 	tripGeneratedColumns      = []string{}
 )

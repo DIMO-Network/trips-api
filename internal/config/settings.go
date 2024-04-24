@@ -35,4 +35,8 @@ type Settings struct {
 	PrivilegeJWKURL string `yaml:"PRIVILEGE_JWK_URL"`
 
 	VehicleNFTAddr string `yaml:"VEHICLE_NFT_ADDR"`
+
+	DeviceGRPCAddr   string `yaml:"DEVICE_GRPC_ADDR"`
+	JwtKeySetURL     string `yaml:"JWT_KEY_SET_URL"`
+	UsersAPIGRPCAddr string `yaml:"USERS_API_GRPC_ADDR"`
 }
