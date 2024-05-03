@@ -3,7 +3,6 @@ package helper
 import (
 	"time"
 
-	"github.com/DIMO-Network/trips-api/models"
 	"github.com/umahmood/haversine"
 	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
@@ -31,31 +30,19 @@ type PointTime struct {
 	Longitude float64   `json:"longitude,omitempty" example:"-122.4194"`
 }
 
-func TripGeos(trip *models.Trip, details *TripDetails, prevTripEnd pgeo.NullPoint) *TripDetails {
-	if trip.StartPosition.Valid {
-		details.Start.Actual.Latitude = trip.StartPosition.Y
-		details.Start.Actual.Longitude = trip.StartPosition.X
-
-		if prevTripEnd.Valid {
-			if distMiles, _ := haversine.Distance(
-				haversine.Coord{Lat: prevTripEnd.Y, Lon: prevTripEnd.X},
-				haversine.Coord{Lat: details.Start.Actual.Latitude, Lon: details.Start.Actual.Longitude},
-			); distMiles < .25 {
-				// if the trip start location is less than 0.25 miles from the previous trip end location
-				// user prior trip end as the new start estimate
-				// NOTE that this does not tell us what the estimated start time is
-				details.Start.Estimate = &PointTime{
-					Longitude: prevTripEnd.X,
-					Latitude:  prevTripEnd.Y,
-				}
-			}
-		}
+func InterpolateTripStart(prevTripEnd, newTripStart pgeo.NullPoint) bool {
+	if distMiles, _ := haversine.Distance(
+		haversine.Coord{
+			Lat: prevTripEnd.Y,
+			Lon: prevTripEnd.X,
+		},
+		haversine.Coord{
+			Lat: newTripStart.Y,
+			Lon: newTripStart.X,
+		},
+	); distMiles < 0.25 {
+		return true
 	}
 
-	if trip.EndPosition.Valid {
-		details.End.Actual.Latitude = trip.EndPosition.Y
-		details.End.Actual.Longitude = trip.EndPosition.X
-	}
-
-	return details
+	return false
 }

@@ -10,7 +10,6 @@ import (
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
-	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
 
 type Handler struct {
@@ -57,7 +56,7 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 		qm.Load(
 			models.VehicleRels.VehicleTokenTrips,
 			qm.Where(models.TripColumns.EndTime+" IS NOT NULL"),
-			qm.OrderBy(models.TripColumns.EndTime+" ASC"),
+			qm.OrderBy(models.TripColumns.EndTime+" DESC"),
 			qm.Limit(pageSize),
 			qm.Offset((p.Page-1)*pageSize),
 		),
@@ -75,24 +74,28 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 		TotalPages:  int(math.Ceil(float64(totalCount) / pageSize)),
 	}
 
-	var prevTripEnd pgeo.NullPoint
 	for i, trp := range v.R.VehicleTokenTrips {
 		resp.Trips[i] = &helper.TripDetails{
 			TripID: trp.ID,
 			Start: helper.TripEvent{
 				Actual: helper.PointTime{
-					Time: trp.StartTime,
+					Time:      trp.StartTime,
+					Latitude:  trp.StartPosition.Y,
+					Longitude: trp.StartPosition.X,
+				},
+				Estimate: &helper.PointTime{
+					Latitude:  trp.StartPositionEstimate.Y,
+					Longitude: trp.StartPositionEstimate.X,
 				},
 			},
 			End: helper.TripEvent{
 				Actual: helper.PointTime{
-					Time: trp.EndTime.Time,
+					Time:      trp.EndTime.Time,
+					Latitude:  trp.EndPosition.Y,
+					Longitude: trp.EndPosition.X,
 				},
 			},
 		}
-
-		resp.Trips[i] = helper.TripGeos(trp, resp.Trips[i], prevTripEnd)
-		prevTripEnd = trp.EndPosition
 	}
 
 	return c.JSON(resp)
