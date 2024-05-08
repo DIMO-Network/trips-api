@@ -29,7 +29,7 @@ const pageSize = 100
 //	@Security		BearerAuth
 //	@Param			tokenId	path		int	true	"Vehicle token id"
 //	@Param			page	query		int	false	"Page of trips to retrieve. Defaults to 1."
-//	@Success		200		{object}	api.VehicleTripsResp
+//	@Success		200		{object}	helper.VehicleTrips
 //	@Router			/vehicle/{tokenId}/trips [get]
 func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 	rawTokenID := c.Params("tokenID")

@@ -1,22 +1,35 @@
 basePath: /v1
 definitions:
-  internal_api.Endpoint:
+  github_com_DIMO-Network_trips-api_internal_helper.PointTime:
     properties:
+      latitude:
+        example: 37.7749
+        type: number
+      longitude:
+        example: -122.4194
+        type: number
       time:
         example: "2023-05-04T09:00:00Z"
         type: string
     type: object
-  internal_api.VehicleTripResp:
+  github_com_DIMO-Network_trips-api_internal_helper.TripDetails:
     properties:
       end:
-        $ref: '#/definitions/internal_api.Endpoint'
+        $ref: '#/definitions/github_com_DIMO-Network_trips-api_internal_helper.TripEvent'
       id:
         example: 2Y83IHPItgk0uHD7hybGnA776Bo
         type: string
       start:
-        $ref: '#/definitions/internal_api.Endpoint'
+        $ref: '#/definitions/github_com_DIMO-Network_trips-api_internal_helper.TripEvent'
     type: object
-  internal_api.VehicleTripsResp:
+  github_com_DIMO-Network_trips-api_internal_helper.TripEvent:
+    properties:
+      actual:
+        $ref: '#/definitions/github_com_DIMO-Network_trips-api_internal_helper.PointTime'
+      estimate:
+        $ref: '#/definitions/github_com_DIMO-Network_trips-api_internal_helper.PointTime'
+    type: object
+  github_com_DIMO-Network_trips-api_internal_helper.VehicleTrips:
     properties:
       currentPage:
         example: 1
@@ -26,7 +39,7 @@ definitions:
         type: integer
       trips:
         items:
-          $ref: '#/definitions/internal_api.VehicleTripResp'
+          $ref: '#/definitions/github_com_DIMO-Network_trips-api_internal_helper.TripDetails'
         type: array
     type: object
 info:
@@ -54,7 +67,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_api.VehicleTripsResp'
+            $ref: '#/definitions/github_com_DIMO-Network_trips-api_internal_helper.VehicleTrips'
       security:
       - BearerAuth: []
 securityDefinitions:
