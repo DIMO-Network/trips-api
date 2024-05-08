@@ -13,9 +13,6 @@ require (
 	github.com/swaggo/swag v1.16.2
 	github.com/volatiletech/strmangle v0.0.5
 	github.com/warp-contracts/syncer v0.2.39
-)
-
-require (
 	github.com/docker/go-connections v0.5.0
 	github.com/ethereum/go-ethereum v1.13.4
 	github.com/pressly/goose/v3 v3.20.0

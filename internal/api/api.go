@@ -5,7 +5,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/DIMO-Network/trips-api/internal/helper"
+	tripgeos "github.com/DIMO-Network/trips-api/internal/helper"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/gofiber/fiber/v2"
@@ -68,28 +68,28 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	resp := helper.VehicleTrips{
-		Trips:       make([]*helper.TripDetails, len(v.R.VehicleTokenTrips)),
+	resp := tripgeos.VehicleTrips{
+		Trips:       make([]tripgeos.TripDetails, len(v.R.VehicleTokenTrips)),
 		CurrentPage: p.Page,
 		TotalPages:  int(math.Ceil(float64(totalCount) / pageSize)),
 	}
 
 	for i, trp := range v.R.VehicleTokenTrips {
-		resp.Trips[i] = &helper.TripDetails{
+		resp.Trips[i] = tripgeos.TripDetails{
 			TripID: trp.ID,
-			Start: helper.TripEvent{
-				Actual: helper.PointTime{
+			Start: tripgeos.TripEvent{
+				Actual: tripgeos.PointTime{
 					Time:      trp.StartTime,
 					Latitude:  trp.StartPosition.Y,
 					Longitude: trp.StartPosition.X,
 				},
-				Estimate: &helper.PointTime{
+				Estimate: &tripgeos.PointTime{
 					Latitude:  trp.StartPositionEstimate.Y,
 					Longitude: trp.StartPositionEstimate.X,
 				},
 			},
-			End: helper.TripEvent{
-				Actual: helper.PointTime{
+			End: tripgeos.TripEvent{
+				Actual: tripgeos.PointTime{
 					Time:      trp.EndTime.Time,
 					Latitude:  trp.EndPosition.Y,
 					Longitude: trp.EndPosition.X,

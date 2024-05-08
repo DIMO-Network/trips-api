@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/shared"
-	"github.com/DIMO-Network/trips-api/internal/helper"
+	tripgeos "github.com/DIMO-Network/trips-api/internal/helper"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
@@ -96,8 +96,8 @@ func (c *Consumer) BeginSegment(ctx context.Context, event shared.CloudEvent[Seg
 		segment.StartPosition = pgeo.NewNullPoint(pgeo.NewPoint(*event.Data.Start.Longitude, *event.Data.Start.Latitude), true)
 	}
 
-	if v.R != nil && len(v.R.VehicleTokenTrips) > 0 {
-		if helper.InterpolateTripStart(v.R.VehicleTokenTrips[0].EndPosition, segment.StartPosition) {
+	if len(v.R.VehicleTokenTrips) > 0 {
+		if tripgeos.InterpolateTripStart(v.R.VehicleTokenTrips[0].EndPosition, segment.StartPosition) {
 			segment.StartPositionEstimate = v.R.VehicleTokenTrips[0].EndPosition
 		}
 	}

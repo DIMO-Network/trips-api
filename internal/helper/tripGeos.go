@@ -1,4 +1,4 @@
-package helper
+package tripgeos
 
 import (
 	"time"
@@ -8,9 +8,9 @@ import (
 )
 
 type VehicleTrips struct {
-	Trips       []*TripDetails `json:"trips"`
-	TotalPages  int            `json:"totalPages" example:"1"`
-	CurrentPage int            `json:"currentPage" example:"1"`
+	Trips       []TripDetails `json:"trips"`
+	TotalPages  int           `json:"totalPages" example:"1"`
+	CurrentPage int           `json:"currentPage" example:"1"`
 }
 
 type TripDetails struct {
@@ -31,6 +31,10 @@ type PointTime struct {
 }
 
 func InterpolateTripStart(prevTripEnd, newTripStart pgeo.NullPoint) bool {
+	if !prevTripEnd.Valid || !newTripStart.Valid {
+		return false
+	}
+
 	if distMiles, _ := haversine.Distance(
 		haversine.Coord{
 			Lat: prevTripEnd.Y,
