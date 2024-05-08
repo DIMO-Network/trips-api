@@ -114,5 +114,5 @@ func validateQueryParams(p *Params, c *fiber.Ctx) error {
 }
 
 type Params struct {
-	Page int `json:"page"`
+	Page int `query:"page"`
 }
