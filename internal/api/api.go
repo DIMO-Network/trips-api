@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"math"
 	"strconv"
-	"time"
 
 	"github.com/DIMO-Network/trips-api/internal/api/types"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
@@ -16,34 +15,6 @@ import (
 
 type Handler struct {
 	pg *pg_store.Store
-}
-
-type VehicleTrips struct {
-	Trips       []TripDetails `json:"trips"`
-	TotalPages  int           `json:"totalPages" example:"1"`
-	CurrentPage int           `json:"currentPage" example:"1"`
-}
-
-type TripDetails struct {
-	ID    string    `json:"id" example:"2Y83IHPItgk0uHD7hybGnA776Bo"`
-	Start TripStart `json:"start"`
-	End   TripEnd   `json:"end"`
-}
-
-type TripStart struct {
-	Time              time.Time `json:"time"`
-	Location          *Location `json:"location,omitempty"`
-	EstimatedLocation *Location `json:"estimatedLocation"`
-}
-
-type TripEnd struct {
-	Time     time.Time `json:"time"`
-	Location *Location `json:"location,omitempty"`
-}
-
-type Location struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
 }
 
 func NewHandler(pgStore *pg_store.Store) *Handler {
