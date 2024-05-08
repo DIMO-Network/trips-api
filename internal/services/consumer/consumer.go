@@ -74,7 +74,7 @@ func (c *Consumer) BeginSegment(ctx context.Context, event shared.CloudEvent[Seg
 		models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID),
 		qm.Load(
 			models.VehicleRels.VehicleTokenTrips,
-			qm.Where(models.TripColumns.EndTime+" IS NOT NULL"),
+			models.TripWhere.EndTime.IsNotNull(),
 			qm.OrderBy(models.TripColumns.EndTime+" DESC"),
 			qm.Limit(1),
 		),
