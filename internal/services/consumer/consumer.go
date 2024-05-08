@@ -131,10 +131,6 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 		segment.StartPositionEstimate = pgeo.NewNullPoint(pgeo.NewPoint(*event.Data.Start.Longitude, *event.Data.Start.Latitude), true)
 	}
 
-	if event.Data.Start.Latitude != nil && event.Data.Start.Longitude != nil {
-		segment.StartPositionEstimate = pgeo.NewNullPoint(pgeo.NewPoint(*event.Data.Start.Longitude, *event.Data.Start.Latitude), true)
-	}
-
 	if event.Data.End.Latitude != nil && event.Data.End.Longitude != nil {
 		segment.EndPosition = pgeo.NewNullPoint(pgeo.NewPoint(*event.Data.End.Longitude, *event.Data.End.Latitude), true)
 	}
@@ -165,7 +161,8 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 			models.TripColumns.EncryptionKey,
 			models.TripColumns.EndTime,
 			models.TripColumns.BundlrID,
-			models.TripColumns.EndPosition),
+			models.TripColumns.EndPosition,
+			models.TripColumns.StartPositionEstimate),
 	); err != nil {
 		return fmt.Errorf("error updating segment %s: %w", event.Data.ID, err)
 	}
