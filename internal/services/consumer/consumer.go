@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/shared"
-	"github.com/DIMO-Network/trips-api/internal/helper"
+	"github.com/DIMO-Network/trips-api/internal/geo"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
@@ -98,7 +98,7 @@ func (c *Consumer) BeginSegment(ctx context.Context, event shared.CloudEvent[Seg
 	}
 
 	if segment.StartPosition.Valid && len(veh.R.VehicleTokenTrips) > 0 {
-		if lastLoc := veh.R.VehicleTokenTrips[0].EndPosition; lastLoc.Valid && helper.InterpolateTripStart(lastLoc.Point, segment.StartPosition.Point) {
+		if lastLoc := veh.R.VehicleTokenTrips[0].EndPosition; lastLoc.Valid && geo.InterpolateTripStart(lastLoc.Point, segment.StartPosition.Point) {
 			segment.StartPositionEstimate = lastLoc
 		}
 	}
@@ -121,6 +121,12 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 		return fmt.Errorf("couldn't produce random key: %w", err)
 	}
 
+	segment.EncryptionKey = null.BytesFrom(encryptionKey)
+	segment.EndTime = null.TimeFrom(event.Data.End.Time)
+
+	segment.StartPosition = nullLocationToDB(event.Data.Start.Location)
+	segment.EndPosition = nullLocationToDB(event.Data.End.Location) //pgeo.NewNullPoint(pgeo.NewPoint(*event.Data.End.Longitude, *event.Data.End.Latitude), true)
+
 	if c.dataFetchEnabled {
 		response, err := c.es.FetchData(ctx, event.Data.DeviceID, segment.StartTime, event.Data.End.Time)
 		if err != nil {
@@ -141,9 +147,6 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 		segment.BundlrID = null.StringFrom(dataItem.Id.Base64())
 		c.logger.Info().Msgf("https://devnet.bundlr.network/%s", segment.BundlrID.String)
 	}
-	segment.EncryptionKey = null.BytesFrom(encryptionKey)
-	segment.EndTime = null.TimeFrom(event.Data.End.Time)
-	segment.EndPosition = nullLocationToDB(event.Data.End.Location)
 	if _, err := segment.Update(ctx, c.pg.DB.DBS().Writer,
 		boil.Whitelist(
 			models.TripColumns.EncryptionKey,

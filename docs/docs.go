@@ -45,7 +45,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_DIMO-Network_trips-api_internal_helper.VehicleTrips"
+                            "$ref": "#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.VehicleTrips"
                         }
                     }
                 }
@@ -53,50 +53,58 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_DIMO-Network_trips-api_internal_helper.PointTime": {
+        "github_com_DIMO-Network_trips-api_internal_api_types.Location": {
             "type": "object",
             "properties": {
                 "latitude": {
-                    "type": "number",
-                    "example": 37.7749
+                    "type": "number"
                 },
                 "longitude": {
-                    "type": "number",
-                    "example": -122.4194
-                },
-                "time": {
-                    "type": "string",
-                    "example": "2023-05-04T09:00:00Z"
+                    "type": "number"
                 }
             }
         },
-        "github_com_DIMO-Network_trips-api_internal_helper.TripDetails": {
+        "github_com_DIMO-Network_trips-api_internal_api_types.TripDetails": {
             "type": "object",
             "properties": {
                 "end": {
-                    "$ref": "#/definitions/github_com_DIMO-Network_trips-api_internal_helper.TripEvent"
+                    "$ref": "#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.TripEnd"
                 },
                 "id": {
                     "type": "string",
                     "example": "2Y83IHPItgk0uHD7hybGnA776Bo"
                 },
                 "start": {
-                    "$ref": "#/definitions/github_com_DIMO-Network_trips-api_internal_helper.TripEvent"
+                    "$ref": "#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.TripStart"
                 }
             }
         },
-        "github_com_DIMO-Network_trips-api_internal_helper.TripEvent": {
+        "github_com_DIMO-Network_trips-api_internal_api_types.TripEnd": {
             "type": "object",
             "properties": {
-                "actual": {
-                    "$ref": "#/definitions/github_com_DIMO-Network_trips-api_internal_helper.PointTime"
+                "location": {
+                    "$ref": "#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.Location"
                 },
-                "estimate": {
-                    "$ref": "#/definitions/github_com_DIMO-Network_trips-api_internal_helper.PointTime"
+                "time": {
+                    "type": "string"
                 }
             }
         },
-        "github_com_DIMO-Network_trips-api_internal_helper.VehicleTrips": {
+        "github_com_DIMO-Network_trips-api_internal_api_types.TripStart": {
+            "type": "object",
+            "properties": {
+                "estimatedLocation": {
+                    "$ref": "#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.Location"
+                },
+                "location": {
+                    "$ref": "#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.Location"
+                },
+                "time": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_DIMO-Network_trips-api_internal_api_types.VehicleTrips": {
             "type": "object",
             "properties": {
                 "currentPage": {
@@ -110,7 +118,7 @@ const docTemplate = `{
                 "trips": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_DIMO-Network_trips-api_internal_helper.TripDetails"
+                        "$ref": "#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.TripDetails"
                     }
                 }
             }
