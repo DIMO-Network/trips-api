@@ -33,8 +33,8 @@ type Consumer struct {
 
 type Endpoint struct {
 	Time      time.Time `json:"time"`
-	Latitude  float64   `json:"latitude"`
-	Longitude float64   `json:"longitude"`
+	Latitude  *float64  `json:"latitude"`
+	Longitude *float64  `json:"longitude"`
 }
 
 type SegmentEvent struct {
@@ -90,7 +90,10 @@ func (c *Consumer) BeginSegment(ctx context.Context, event shared.CloudEvent[Seg
 		ID:             event.Data.ID,
 		VehicleTokenID: v.TokenID,
 		StartTime:      event.Data.Start.Time,
-		StartPosition:  pgeo.NewNullPoint(pointToDB(event.Data.Start.Longitude, event.Data.Start.Latitude), true),
+	}
+
+	if event.Data.Start.Latitude != nil && event.Data.Start.Longitude != nil {
+		segment.StartPosition = pgeo.NewNullPoint(pgeo.NewPoint(*event.Data.Start.Longitude, *event.Data.Start.Latitude), true)
 	}
 
 	if v.R != nil && len(v.R.VehicleTokenTrips) > 0 {
@@ -117,6 +120,25 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 		return fmt.Errorf("couldn't produce random key: %w", err)
 	}
 
+	segment.EncryptionKey = null.BytesFrom(encryptionKey)
+	segment.EndTime = null.TimeFrom(event.Data.End.Time)
+
+	// If lat/ lon was not included in the trip start event but we later see lat/ lon in the
+	// device status, it will be stored in the windower and shared as a part of the trip
+	// completion.
+	if !segment.StartPosition.Valid && event.Data.Start.Latitude != nil && event.Data.Start.Longitude != nil {
+		// should we also interpolate the trip start here?
+		segment.StartPositionEstimate = pgeo.NewNullPoint(pgeo.NewPoint(*event.Data.Start.Longitude, *event.Data.Start.Latitude), true)
+	}
+
+	if event.Data.Start.Latitude != nil && event.Data.Start.Longitude != nil {
+		segment.StartPositionEstimate = pgeo.NewNullPoint(pgeo.NewPoint(*event.Data.Start.Longitude, *event.Data.Start.Latitude), true)
+	}
+
+	if event.Data.End.Latitude != nil && event.Data.End.Longitude != nil {
+		segment.EndPosition = pgeo.NewNullPoint(pgeo.NewPoint(*event.Data.End.Longitude, *event.Data.End.Latitude), true)
+	}
+
 	if c.dataFetchEnabled {
 		response, err := c.es.FetchData(ctx, event.Data.DeviceID, segment.StartTime, event.Data.End.Time)
 		if err != nil {
@@ -137,9 +159,7 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 		segment.BundlrID = null.StringFrom(dataItem.Id.Base64())
 		c.logger.Info().Msgf("https://devnet.bundlr.network/%s", segment.BundlrID.String)
 	}
-	segment.EncryptionKey = null.BytesFrom(encryptionKey)
-	segment.EndTime = null.TimeFrom(event.Data.End.Time)
-	segment.EndPosition = pgeo.NewNullPoint(pointToDB(event.Data.End.Longitude, event.Data.End.Latitude), true)
+
 	if _, err := segment.Update(ctx, c.pg.DB.DBS().Writer,
 		boil.Whitelist(
 			models.TripColumns.EncryptionKey,
@@ -162,9 +182,4 @@ func (c *Consumer) VehicleEvent(ctx context.Context, event shared.CloudEvent[Use
 		return nil
 	}
 	return nil
-}
-
-// pointToDB converts a longitude (x) and latitude (y) to a pgeo.Point.
-func pointToDB(longitude, latitude float64) pgeo.Point {
-	return pgeo.NewPoint(longitude, latitude)
 }
