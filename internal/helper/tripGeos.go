@@ -8,30 +8,37 @@ import (
 )
 
 type VehicleTrips struct {
-	Trips       []*TripDetails `json:"trips"`
-	TotalPages  int            `json:"totalPages" example:"1"`
-	CurrentPage int            `json:"currentPage" example:"1"`
+	Trips       []TripDetails `json:"trips"`
+	TotalPages  int           `json:"totalPages" example:"1"`
+	CurrentPage int           `json:"currentPage" example:"1"`
 }
 
 type TripDetails struct {
-	TripID string    `json:"id" example:"2Y83IHPItgk0uHD7hybGnA776Bo"`
-	Start  TripEvent `json:"start"`
-	End    TripEvent `json:"end"`
+	ID    string    `json:"id" example:"2Y83IHPItgk0uHD7hybGnA776Bo"`
+	Start TripStart `json:"start"`
+	End   TripEnd   `json:"end"`
 }
 
-type TripEvent struct {
-	Estimate *PointTime `json:"estimate,omitempty"`
-	Actual   PointTime  `json:"actual"`
+type TripStart struct {
+	Time              time.Time `json:"time"`
+	Location          *Location `json:"location,omitempty"`
+	EstimatedLocation *Location `json:"estimatedLocation"`
 }
 
-type PointTime struct {
-	Time      time.Time `json:"time,omitempty" example:"2023-05-04T09:00:00Z"`
-	Latitude  float64   `json:"latitude,omitempty" example:"37.7749"`
-	Longitude float64   `json:"longitude,omitempty" example:"-122.4194"`
+type TripEnd struct {
+	Time     time.Time `json:"time"`
+	Location *Location `json:"location,omitempty"`
 }
 
-func InterpolateTripStart(prevTripEnd, newTripStart pgeo.NullPoint) bool {
-	if distMiles, _ := haversine.Distance(
+type Location struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
+const InterpolationThresholdMiles = 0.25
+
+func InterpolateTripStart(prevTripEnd, newTripStart pgeo.Point) bool {
+	distMiles, _ := haversine.Distance(
 		haversine.Coord{
 			Lat: prevTripEnd.Y,
 			Lon: prevTripEnd.X,
@@ -40,9 +47,7 @@ func InterpolateTripStart(prevTripEnd, newTripStart pgeo.NullPoint) bool {
 			Lat: newTripStart.Y,
 			Lon: newTripStart.X,
 		},
-	); distMiles < 0.25 {
-		return true
-	}
+	)
 
-	return false
+	return distMiles < InterpolationThresholdMiles
 }

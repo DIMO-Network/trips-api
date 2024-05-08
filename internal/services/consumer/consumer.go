@@ -31,10 +31,14 @@ type Consumer struct {
 	bundlrEnabled    bool
 }
 
+type Location struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
 type Endpoint struct {
-	Time      time.Time `json:"time"`
-	Latitude  float64   `json:"latitude"`
-	Longitude float64   `json:"longitude"`
+	Time     time.Time `json:"time"`
+	Location *Location `json:"location"`
 }
 
 type SegmentEvent struct {
@@ -70,7 +74,7 @@ func (c *Consumer) ProcessSegmentEvent(ctx context.Context, event shared.CloudEv
 }
 
 func (c *Consumer) BeginSegment(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
-	v, err := models.Vehicles(
+	veh, err := models.Vehicles(
 		models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID),
 		qm.Load(
 			models.VehicleRels.VehicleTokenTrips,
@@ -88,14 +92,14 @@ func (c *Consumer) BeginSegment(ctx context.Context, event shared.CloudEvent[Seg
 
 	segment := models.Trip{
 		ID:             event.Data.ID,
-		VehicleTokenID: v.TokenID,
+		VehicleTokenID: veh.TokenID,
 		StartTime:      event.Data.Start.Time,
-		StartPosition:  pgeo.NewNullPoint(pointToDB(event.Data.Start.Longitude, event.Data.Start.Latitude), true),
+		StartPosition:  nullLocationToDB(event.Data.Start.Location),
 	}
 
-	if v.R != nil && len(v.R.VehicleTokenTrips) > 0 {
-		if helper.InterpolateTripStart(v.R.VehicleTokenTrips[0].EndPosition, segment.StartPosition) {
-			segment.StartPositionEstimate = v.R.VehicleTokenTrips[0].EndPosition
+	if segment.StartPosition.Valid && len(veh.R.VehicleTokenTrips) > 0 {
+		if lastLoc := veh.R.VehicleTokenTrips[0].EndPosition; lastLoc.Valid && helper.InterpolateTripStart(lastLoc.Point, segment.StartPosition.Point) {
+			segment.StartPositionEstimate = lastLoc
 		}
 	}
 
@@ -139,7 +143,7 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 	}
 	segment.EncryptionKey = null.BytesFrom(encryptionKey)
 	segment.EndTime = null.TimeFrom(event.Data.End.Time)
-	segment.EndPosition = pgeo.NewNullPoint(pointToDB(event.Data.End.Longitude, event.Data.End.Latitude), true)
+	segment.EndPosition = nullLocationToDB(event.Data.End.Location)
 	if _, err := segment.Update(ctx, c.pg.DB.DBS().Writer,
 		boil.Whitelist(
 			models.TripColumns.EncryptionKey,
@@ -164,7 +168,9 @@ func (c *Consumer) VehicleEvent(ctx context.Context, event shared.CloudEvent[Use
 	return nil
 }
 
-// pointToDB converts a longitude (x) and latitude (y) to a pgeo.Point.
-func pointToDB(longitude, latitude float64) pgeo.Point {
-	return pgeo.NewPoint(longitude, latitude)
+func nullLocationToDB(l *Location) pgeo.NullPoint {
+	if l == nil {
+		return pgeo.NullPoint{}
+	}
+	return pgeo.NewNullPoint(pgeo.NewPoint(l.Longitude, l.Latitude), true)
 }

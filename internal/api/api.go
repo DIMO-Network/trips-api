@@ -10,6 +10,7 @@ import (
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
 
 type Handler struct {
@@ -69,31 +70,22 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 	}
 
 	resp := helper.VehicleTrips{
-		Trips:       make([]*helper.TripDetails, len(v.R.VehicleTokenTrips)),
+		Trips:       make([]helper.TripDetails, len(v.R.VehicleTokenTrips)),
 		CurrentPage: p.Page,
 		TotalPages:  int(math.Ceil(float64(totalCount) / pageSize)),
 	}
 
 	for i, trp := range v.R.VehicleTokenTrips {
-		resp.Trips[i] = &helper.TripDetails{
-			TripID: trp.ID,
-			Start: helper.TripEvent{
-				Actual: helper.PointTime{
-					Time:      trp.StartTime,
-					Latitude:  trp.StartPosition.Y,
-					Longitude: trp.StartPosition.X,
-				},
-				Estimate: &helper.PointTime{
-					Latitude:  trp.StartPositionEstimate.Y,
-					Longitude: trp.StartPositionEstimate.X,
-				},
+		resp.Trips[i] = helper.TripDetails{
+			ID: trp.ID,
+			Start: helper.TripStart{
+				Time:              trp.StartTime,
+				Location:          nullLocationToAPI(trp.StartPosition),
+				EstimatedLocation: nullLocationToAPI(trp.StartPositionEstimate),
 			},
-			End: helper.TripEvent{
-				Actual: helper.PointTime{
-					Time:      trp.EndTime.Time,
-					Latitude:  trp.EndPosition.Y,
-					Longitude: trp.EndPosition.X,
-				},
+			End: helper.TripEnd{
+				Time:     trp.EndTime.Time,
+				Location: nullLocationToAPI(trp.EndPosition),
 			},
 		}
 	}
@@ -115,4 +107,11 @@ func validateQueryParams(p *Params, c *fiber.Ctx) error {
 
 type Params struct {
 	Page int `query:"page"`
+}
+
+func nullLocationToAPI(l pgeo.NullPoint) *helper.Location {
+	if l.Valid {
+		return &helper.Location{Latitude: l.Y, Longitude: l.X}
+	}
+	return nil
 }
