@@ -17,7 +17,7 @@ type TripDetails struct {
 type TripStart struct {
 	Time              time.Time `json:"time"`
 	Location          *Location `json:"location,omitempty"`
-	EstimatedLocation *Location `json:"estimatedLocation"`
+	EstimatedLocation *Location `json:"estimatedLocation,omitempty"`
 }
 
 type TripEnd struct {
