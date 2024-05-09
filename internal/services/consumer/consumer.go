@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/DIMO-Network/shared"
-	tripgeos "github.com/DIMO-Network/trips-api/internal/helper"
+	"github.com/DIMO-Network/trips-api/internal/geo"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
@@ -31,10 +31,14 @@ type Consumer struct {
 	bundlrEnabled    bool
 }
 
+type Location struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+}
+
 type Endpoint struct {
-	Time      time.Time `json:"time"`
-	Latitude  *float64  `json:"latitude"`
-	Longitude *float64  `json:"longitude"`
+	Time     time.Time `json:"time"`
+	Location *Location `json:"location"`
 }
 
 type SegmentEvent struct {
@@ -70,7 +74,7 @@ func (c *Consumer) ProcessSegmentEvent(ctx context.Context, event shared.CloudEv
 }
 
 func (c *Consumer) BeginSegment(ctx context.Context, event shared.CloudEvent[SegmentEvent]) error {
-	v, err := models.Vehicles(
+	veh, err := models.Vehicles(
 		models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID),
 		qm.Load(
 			models.VehicleRels.VehicleTokenTrips,
@@ -88,17 +92,14 @@ func (c *Consumer) BeginSegment(ctx context.Context, event shared.CloudEvent[Seg
 
 	segment := models.Trip{
 		ID:             event.Data.ID,
-		VehicleTokenID: v.TokenID,
+		VehicleTokenID: veh.TokenID,
 		StartTime:      event.Data.Start.Time,
+		StartPosition:  nullLocationToDB(event.Data.Start.Location),
 	}
 
-	if event.Data.Start.Latitude != nil && event.Data.Start.Longitude != nil {
-		segment.StartPosition = pgeo.NewNullPoint(pgeo.NewPoint(*event.Data.Start.Longitude, *event.Data.Start.Latitude), true)
-	}
-
-	if len(v.R.VehicleTokenTrips) > 0 {
-		if tripgeos.InterpolateTripStart(v.R.VehicleTokenTrips[0].EndPosition, segment.StartPosition) {
-			segment.StartPositionEstimate = v.R.VehicleTokenTrips[0].EndPosition
+	if segment.StartPosition.Valid && len(veh.R.VehicleTokenTrips) > 0 {
+		if lastLoc := veh.R.VehicleTokenTrips[0].EndPosition; lastLoc.Valid && geo.InterpolateTripStart(lastLoc.Point, segment.StartPosition.Point) {
+			segment.StartPositionEstimate = lastLoc
 		}
 	}
 
@@ -122,17 +123,14 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 
 	segment.EncryptionKey = null.BytesFrom(encryptionKey)
 	segment.EndTime = null.TimeFrom(event.Data.End.Time)
+	segment.EndPosition = nullLocationToDB(event.Data.End.Location)
 
-	// If lat/ lon was not included in the trip start event but we later see lat/ lon in the
-	// device status, it will be stored in the windower and shared as a part of the trip
-	// completion.
-	if !segment.StartPosition.Valid && event.Data.Start.Latitude != nil && event.Data.Start.Longitude != nil {
-		// should we also interpolate the trip start here?
-		segment.StartPositionEstimate = pgeo.NewNullPoint(pgeo.NewPoint(*event.Data.Start.Longitude, *event.Data.Start.Latitude), true)
-	}
-
-	if event.Data.End.Latitude != nil && event.Data.End.Longitude != nil {
-		segment.EndPosition = pgeo.NewNullPoint(pgeo.NewPoint(*event.Data.End.Longitude, *event.Data.End.Latitude), true)
+	// do we want to overwrite the start position here if we didn't have it before
+	// or indicate that it might be an estimate?
+	// do we want to try and do any interpolation here?
+	segment.StartPosition = nullLocationToDB(event.Data.Start.Location)
+	if !segment.StartPosition.Valid && event.Data.Start.Location != nil {
+		segment.StartPositionEstimate = nullLocationToDB(event.Data.Start.Location)
 	}
 
 	if c.dataFetchEnabled {
@@ -179,4 +177,11 @@ func (c *Consumer) VehicleEvent(ctx context.Context, event shared.CloudEvent[Use
 		return nil
 	}
 	return nil
+}
+
+func nullLocationToDB(l *Location) pgeo.NullPoint {
+	if l == nil {
+		return pgeo.NullPoint{}
+	}
+	return pgeo.NewNullPoint(pgeo.NewPoint(l.Longitude, l.Latitude), true)
 }

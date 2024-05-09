@@ -45,9 +45,11 @@ var beginSegment shared.CloudEvent[SegmentEvent] = shared.CloudEvent[SegmentEven
 		ID:       testExpectedStartAndEnd,
 		DeviceID: createDevice.Data.Device.ID,
 		Start: Endpoint{
-			Time:      time.Now().Add(-time.Hour * 3 * 24).UTC(),
-			Latitude:  &startLat,
-			Longitude: &startLon,
+			Time: time.Now().Add(-time.Hour * 3 * 24).UTC(),
+			Location: &Location{
+				Latitude:  startLat,
+				Longitude: startLon,
+			},
 		},
 	},
 }
@@ -60,9 +62,11 @@ var completeSegment shared.CloudEvent[SegmentEvent] = shared.CloudEvent[SegmentE
 		DeviceID:  createDevice.Data.Device.ID,
 		Completed: true,
 		End: Endpoint{
-			Time:      time.Now().Add(-time.Hour * 30).UTC(),
-			Latitude:  &endLat,
-			Longitude: &endLon,
+			Time: time.Now().Add(-time.Hour * 30).UTC(),
+			Location: &Location{
+				Latitude:  endLat,
+				Longitude: endLon,
+			},
 		},
 		Start: beginSegment.Data.Start,
 	},
@@ -75,9 +79,11 @@ var newTrpEstimatestart shared.CloudEvent[SegmentEvent] = shared.CloudEvent[Segm
 		ID:       testEstimateStart,
 		DeviceID: createDevice.Data.Device.ID,
 		Start: Endpoint{
-			Time:      time.Now().Add(-time.Minute * 3).UTC(),
-			Latitude:  &estStartLat,
-			Longitude: &estStartLon,
+			Time: time.Now().Add(-time.Minute * 3).UTC(),
+			Location: &Location{
+				Latitude:  estStartLat,
+				Longitude: estStartLon,
+			},
 		},
 	},
 }
@@ -89,9 +95,11 @@ var newTrpNoStartEstimate shared.CloudEvent[SegmentEvent] = shared.CloudEvent[Se
 		ID:       testFailToEstimateStart,
 		DeviceID: createDevice.Data.Device.ID,
 		Start: Endpoint{
-			Time:      time.Now().Add(-time.Minute * 5).UTC(),
-			Latitude:  &noEstStartLat,
-			Longitude: &noEstStartLon,
+			Time: time.Now().Add(-time.Minute * 5).UTC(),
+			Location: &Location{
+				Latitude:  noEstStartLat,
+				Longitude: noEstStartLon,
+			},
 		},
 	},
 }
@@ -134,8 +142,8 @@ func Test_TripStartTripWithGeos(t *testing.T) {
 		t.Fatal(err)
 	}
 	trp, _ := models.Trips(models.TripWhere.ID.EQ(beginSegment.Data.ID)).One(ctx, pdb.DBS().Reader)
-	assert.Equal(t, trp.StartPosition.X, *beginSegment.Data.Start.Longitude)
-	assert.Equal(t, trp.StartPosition.Y, *beginSegment.Data.Start.Latitude)
+	assert.Equal(t, trp.StartPosition.X, beginSegment.Data.Start.Location.Longitude)
+	assert.Equal(t, trp.StartPosition.Y, beginSegment.Data.Start.Location.Latitude)
 	assert.Equal(t, trp.StartTime, beginSegment.Data.Start.Time)
 
 	if err := consumer.ProcessSegmentEvent(ctx, completeSegment); err != nil {
@@ -143,8 +151,8 @@ func Test_TripStartTripWithGeos(t *testing.T) {
 	}
 	err := trp.Reload(ctx, pdb.DBS().Reader)
 	assert.NoError(t, err)
-	assert.Equal(t, trp.EndPosition.X, *completeSegment.Data.End.Longitude)
-	assert.Equal(t, trp.EndPosition.Y, *completeSegment.Data.End.Latitude)
+	assert.Equal(t, trp.EndPosition.X, completeSegment.Data.End.Location.Longitude)
+	assert.Equal(t, trp.EndPosition.Y, completeSegment.Data.End.Location.Latitude)
 	assert.Equal(t, trp.EndTime.Time, completeSegment.Data.End.Time)
 
 }
@@ -175,8 +183,8 @@ func Test_NewTripEstimateStart(t *testing.T) {
 		t.Fatal(err)
 	}
 	estTrp, _ := models.Trips(models.TripWhere.ID.EQ(newTrpEstimatestart.Data.ID)).One(ctx, pdb.DBS().Reader)
-	assert.Equal(t, estTrp.StartPositionEstimate.X, *completeSegment.Data.End.Longitude)
-	assert.Equal(t, estTrp.StartPositionEstimate.Y, *completeSegment.Data.End.Latitude)
+	assert.Equal(t, estTrp.StartPositionEstimate.X, completeSegment.Data.End.Location.Longitude)
+	assert.Equal(t, estTrp.StartPositionEstimate.Y, completeSegment.Data.End.Location.Latitude)
 
 }
 
@@ -208,9 +216,8 @@ func Test_NewTripDontEstimateStart(t *testing.T) {
 
 	newTripNoEst, _ := models.Trips(models.TripWhere.ID.EQ(newTrpNoStartEstimate.Data.ID)).One(ctx, pdb.DBS().Reader)
 	assert.Equal(t, newTripNoEst.StartPositionEstimate, pgeo.NullPoint{})
-	assert.Equal(t, newTripNoEst.StartPosition.X, *newTrpNoStartEstimate.Data.Start.Longitude)
-	assert.Equal(t, newTripNoEst.StartPosition.Y, *newTrpNoStartEstimate.Data.Start.Latitude)
-
+	assert.Equal(t, newTripNoEst.StartPosition.X, newTrpNoStartEstimate.Data.Start.Location.Longitude)
+	assert.Equal(t, newTripNoEst.StartPosition.Y, newTrpNoStartEstimate.Data.Start.Location.Latitude)
 }
 
 func Test_StartLocationNotIncludedInFirstEvent(t *testing.T) {

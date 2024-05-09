@@ -5,11 +5,12 @@ import (
 	"math"
 	"strconv"
 
-	tripgeos "github.com/DIMO-Network/trips-api/internal/helper"
+	"github.com/DIMO-Network/trips-api/internal/api/types"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
 
 type Handler struct {
@@ -29,7 +30,7 @@ const pageSize = 100
 //	@Security		BearerAuth
 //	@Param			tokenId	path		int	true	"Vehicle token id"
 //	@Param			page	query		int	false	"Page of trips to retrieve. Defaults to 1."
-//	@Success		200		{object}	helper.VehicleTrips
+//	@Success		200		{object}	types.VehicleTrips
 //	@Router			/vehicle/{tokenId}/trips [get]
 func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 	rawTokenID := c.Params("tokenID")
@@ -68,32 +69,23 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	resp := tripgeos.VehicleTrips{
-		Trips:       make([]tripgeos.TripDetails, len(v.R.VehicleTokenTrips)),
+	resp := types.VehicleTrips{
+		Trips:       make([]types.TripDetails, len(v.R.VehicleTokenTrips)),
 		CurrentPage: p.Page,
 		TotalPages:  int(math.Ceil(float64(totalCount) / pageSize)),
 	}
 
 	for i, trp := range v.R.VehicleTokenTrips {
-		resp.Trips[i] = tripgeos.TripDetails{
-			TripID: trp.ID,
-			Start: tripgeos.TripEvent{
-				Actual: tripgeos.PointTime{
-					Time:      trp.StartTime,
-					Latitude:  trp.StartPosition.Y,
-					Longitude: trp.StartPosition.X,
-				},
-				Estimate: &tripgeos.PointTime{
-					Latitude:  trp.StartPositionEstimate.Y,
-					Longitude: trp.StartPositionEstimate.X,
-				},
+		resp.Trips[i] = types.TripDetails{
+			ID: trp.ID,
+			Start: types.TripStart{
+				Time:              trp.StartTime,
+				Location:          nullLocationToAPI(trp.StartPosition),
+				EstimatedLocation: nullLocationToAPI(trp.StartPositionEstimate),
 			},
-			End: tripgeos.TripEvent{
-				Actual: tripgeos.PointTime{
-					Time:      trp.EndTime.Time,
-					Latitude:  trp.EndPosition.Y,
-					Longitude: trp.EndPosition.X,
-				},
+			End: types.TripEnd{
+				Time:     trp.EndTime.Time,
+				Location: nullLocationToAPI(trp.EndPosition),
 			},
 		}
 	}
@@ -115,4 +107,11 @@ func validateQueryParams(p *Params, c *fiber.Ctx) error {
 
 type Params struct {
 	Page int `query:"page"`
+}
+
+func nullLocationToAPI(l pgeo.NullPoint) *types.Location {
+	if l.Valid {
+		return &types.Location{Latitude: l.Y, Longitude: l.X}
+	}
+	return nil
 }
