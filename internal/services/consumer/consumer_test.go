@@ -68,6 +68,7 @@ var completeSegment shared.CloudEvent[SegmentEvent] = shared.CloudEvent[SegmentE
 				Longitude: endLon,
 			},
 		},
+		Start: beginSegment.Data.Start,
 	},
 }
 
@@ -137,7 +138,7 @@ func Test_TripStartTripWithGeos(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := consumer.BeginSegment(ctx, beginSegment); err != nil {
+	if err := consumer.ProcessSegmentEvent(ctx, beginSegment); err != nil {
 		t.Fatal(err)
 	}
 	trp, _ := models.Trips(models.TripWhere.ID.EQ(beginSegment.Data.ID)).One(ctx, pdb.DBS().Reader)
@@ -145,7 +146,7 @@ func Test_TripStartTripWithGeos(t *testing.T) {
 	assert.Equal(t, trp.StartPosition.Y, beginSegment.Data.Start.Location.Latitude)
 	assert.Equal(t, trp.StartTime, beginSegment.Data.Start.Time)
 
-	if err := consumer.CompleteSegment(ctx, completeSegment); err != nil {
+	if err := consumer.ProcessSegmentEvent(ctx, completeSegment); err != nil {
 		t.Fatal(err)
 	}
 	err := trp.Reload(ctx, pdb.DBS().Reader)
@@ -170,15 +171,15 @@ func Test_NewTripEstimateStart(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := consumer.BeginSegment(ctx, beginSegment); err != nil {
+	if err := consumer.ProcessSegmentEvent(ctx, beginSegment); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := consumer.CompleteSegment(ctx, completeSegment); err != nil {
+	if err := consumer.ProcessSegmentEvent(ctx, completeSegment); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := consumer.BeginSegment(ctx, newTrpEstimatestart); err != nil {
+	if err := consumer.ProcessSegmentEvent(ctx, newTrpEstimatestart); err != nil {
 		t.Fatal(err)
 	}
 	estTrp, _ := models.Trips(models.TripWhere.ID.EQ(newTrpEstimatestart.Data.ID)).One(ctx, pdb.DBS().Reader)
@@ -201,15 +202,15 @@ func Test_NewTripDontEstimateStart(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := consumer.BeginSegment(ctx, beginSegment); err != nil {
+	if err := consumer.ProcessSegmentEvent(ctx, beginSegment); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := consumer.CompleteSegment(ctx, completeSegment); err != nil {
+	if err := consumer.ProcessSegmentEvent(ctx, completeSegment); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := consumer.BeginSegment(ctx, newTrpNoStartEstimate); err != nil {
+	if err := consumer.ProcessSegmentEvent(ctx, newTrpNoStartEstimate); err != nil {
 		t.Fatal(err)
 	}
 
@@ -217,4 +218,42 @@ func Test_NewTripDontEstimateStart(t *testing.T) {
 	assert.Equal(t, newTripNoEst.StartPositionEstimate, pgeo.NullPoint{})
 	assert.Equal(t, newTripNoEst.StartPosition.X, newTrpNoStartEstimate.Data.Start.Location.Longitude)
 	assert.Equal(t, newTripNoEst.StartPosition.Y, newTrpNoStartEstimate.Data.Start.Location.Latitude)
+}
+
+func Test_StartLocationNotIncludedInFirstEvent(t *testing.T) {
+	ctx := context.Background()
+	pdb := test.StartContainerDatabase(ctx, t, migrationsDirRelPath)
+	consumer := Consumer{
+		logger: &zerolog.Logger{},
+		pg: &pg.Store{
+			DB: pdb,
+		},
+	}
+
+	beginSegment.Data.Start.Latitude = nil
+	beginSegment.Data.Start.Longitude = nil
+
+	if err := consumer.VehicleEvent(ctx, createDevice); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := consumer.ProcessSegmentEvent(ctx, beginSegment); err != nil {
+		t.Fatal(err)
+	}
+
+	trp, _ := models.Trips(models.TripWhere.ID.EQ(beginSegment.Data.ID)).One(ctx, pdb.DBS().Reader)
+	assert.False(t, trp.StartPosition.Valid)
+	assert.Equal(t, trp.StartTime, beginSegment.Data.Start.Time)
+
+	if err := consumer.ProcessSegmentEvent(ctx, completeSegment); err != nil {
+		t.Fatal(err)
+	}
+	err := trp.Reload(ctx, pdb.DBS().Reader)
+	assert.NoError(t, err)
+	assert.Equal(t, trp.StartPositionEstimate.X, *completeSegment.Data.Start.Longitude)
+	assert.Equal(t, trp.StartPositionEstimate.Y, *completeSegment.Data.Start.Latitude)
+	assert.Equal(t, trp.EndPosition.X, *completeSegment.Data.End.Longitude)
+	assert.Equal(t, trp.EndPosition.Y, *completeSegment.Data.End.Latitude)
+	assert.Equal(t, trp.EndTime.Time, completeSegment.Data.End.Time)
+
 }

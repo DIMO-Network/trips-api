@@ -123,9 +123,15 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 
 	segment.EncryptionKey = null.BytesFrom(encryptionKey)
 	segment.EndTime = null.TimeFrom(event.Data.End.Time)
+	segment.EndPosition = nullLocationToDB(event.Data.End.Location)
 
+	// do we want to overwrite the start position here if we didn't have it before
+	// or indicate that it might be an estimate?
+	// do we want to try and do any interpolation here?
 	segment.StartPosition = nullLocationToDB(event.Data.Start.Location)
-	segment.EndPosition = nullLocationToDB(event.Data.End.Location) //pgeo.NewNullPoint(pgeo.NewPoint(*event.Data.End.Longitude, *event.Data.End.Latitude), true)
+	if !segment.StartPosition.Valid && event.Data.Start.Location != nil {
+		segment.StartPositionEstimate = nullLocationToDB(event.Data.Start.Location)
+	}
 
 	if c.dataFetchEnabled {
 		response, err := c.es.FetchData(ctx, event.Data.DeviceID, segment.StartTime, event.Data.End.Time)
@@ -147,12 +153,14 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 		segment.BundlrID = null.StringFrom(dataItem.Id.Base64())
 		c.logger.Info().Msgf("https://devnet.bundlr.network/%s", segment.BundlrID.String)
 	}
+
 	if _, err := segment.Update(ctx, c.pg.DB.DBS().Writer,
 		boil.Whitelist(
 			models.TripColumns.EncryptionKey,
 			models.TripColumns.EndTime,
 			models.TripColumns.BundlrID,
-			models.TripColumns.EndPosition),
+			models.TripColumns.EndPosition,
+			models.TripColumns.StartPositionEstimate),
 	); err != nil {
 		return fmt.Errorf("error updating segment %s: %w", event.Data.ID, err)
 	}
