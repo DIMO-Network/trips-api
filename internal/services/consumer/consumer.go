@@ -125,12 +125,29 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 	segment.EndTime = null.TimeFrom(event.Data.End.Time)
 	segment.EndPosition = nullLocationToDB(event.Data.End.Location)
 
-	// do we want to overwrite the start position here if we didn't have it before
-	// or indicate that it might be an estimate?
-	// do we want to try and do any interpolation here?
-	segment.StartPosition = nullLocationToDB(event.Data.Start.Location)
 	if !segment.StartPosition.Valid && event.Data.Start.Location != nil {
-		segment.StartPositionEstimate = nullLocationToDB(event.Data.Start.Location)
+		veh, err := models.Vehicles(
+			models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID),
+			qm.Load(
+				models.VehicleRels.VehicleTokenTrips,
+				models.TripWhere.EndTime.IsNotNull(),
+				qm.OrderBy(models.TripColumns.EndTime+" DESC"),
+				qm.Limit(1),
+			),
+		).One(ctx, c.pg.DB.DBS().Reader)
+		if err != nil {
+			c.logger.Error().Err(err).Msg("failed to find vehicle")
+		}
+
+		switch {
+		case len(veh.R.VehicleTokenTrips) > 0:
+			estLoc := nullLocationToDB(event.Data.Start.Location)
+			if lastLoc := veh.R.VehicleTokenTrips[0].EndPosition; lastLoc.Valid && geo.InterpolateTripStart(lastLoc.Point, estLoc.Point) {
+				segment.StartPositionEstimate = lastLoc
+			}
+		default:
+			segment.StartPositionEstimate = nullLocationToDB(event.Data.Start.Location)
+		}
 	}
 
 	if c.dataFetchEnabled {
