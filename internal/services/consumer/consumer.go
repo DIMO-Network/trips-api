@@ -126,7 +126,8 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 	segment.EndPosition = nullLocationToDB(event.Data.End.Location)
 
 	if !segment.StartPosition.Valid && event.Data.Start.Location != nil {
-		veh, err := models.Vehicles(
+		segment.StartPositionEstimate = nullLocationToDB(event.Data.Start.Location)
+		if veh, err := models.Vehicles(
 			models.VehicleWhere.UserDeviceID.EQ(event.Data.DeviceID),
 			qm.Load(
 				models.VehicleRels.VehicleTokenTrips,
@@ -134,20 +135,17 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 				qm.OrderBy(models.TripColumns.EndTime+" DESC"),
 				qm.Limit(1),
 			),
-		).One(ctx, c.pg.DB.DBS().Reader)
-		if err != nil {
-			c.logger.Error().Err(err).Msg("failed to find vehicle")
+		).One(ctx, c.pg.DB.DBS().Reader); err != nil {
+			c.logger.Error().Err(err).Msg("failed to find vehicle for trip completion estimate")
+		} else {
+			if len(veh.R.VehicleTokenTrips) > 0 {
+				estLoc := nullLocationToDB(event.Data.Start.Location)
+				if lastLoc := veh.R.VehicleTokenTrips[0].EndPosition; lastLoc.Valid && geo.InterpolateTripStart(lastLoc.Point, estLoc.Point) {
+					segment.StartPositionEstimate = lastLoc
+				}
+			}
 		}
 
-		switch {
-		case len(veh.R.VehicleTokenTrips) > 0:
-			estLoc := nullLocationToDB(event.Data.Start.Location)
-			if lastLoc := veh.R.VehicleTokenTrips[0].EndPosition; lastLoc.Valid && geo.InterpolateTripStart(lastLoc.Point, estLoc.Point) {
-				segment.StartPositionEstimate = lastLoc
-			}
-		default:
-			segment.StartPositionEstimate = nullLocationToDB(event.Data.Start.Location)
-		}
 	}
 
 	if c.dataFetchEnabled {
