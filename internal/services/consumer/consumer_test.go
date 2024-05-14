@@ -18,6 +18,7 @@ import (
 
 var (
 	migrationsDirRelPath = "../../../migrations"
+	now                  = time.Now()
 )
 
 var createDevice shared.CloudEvent[UserDeviceMintEvent] = shared.CloudEvent[UserDeviceMintEvent]{
@@ -41,14 +42,14 @@ var segment1 shared.CloudEvent[SegmentEvent] = shared.CloudEvent[SegmentEvent]{
 		ID:       ksuid.New().String(),
 		DeviceID: createDevice.Data.Device.ID,
 		Start: Endpoint{
-			Time: time.Now().Add(-time.Hour * 3 * 24).UTC(),
+			Time: now.Add(-time.Hour * 3 * 24).UTC(),
 			Location: &Location{
 				Latitude:  40.744331740800455,
 				Longitude: -73.98043334522801,
 			},
 		},
 		End: Endpoint{
-			Time: time.Now().Add(-time.Hour * 30).UTC(),
+			Time: now.Add(-time.Hour * 30).UTC(),
 			Location: &Location{
 				Latitude:  33.84805567103969,
 				Longitude: -118.39318923141917,
@@ -62,14 +63,14 @@ var segment2 shared.CloudEvent[SegmentEvent] = shared.CloudEvent[SegmentEvent]{
 		ID:       ksuid.New().String(),
 		DeviceID: createDevice.Data.Device.ID,
 		Start: Endpoint{
-			Time: time.Now().Add(-time.Minute * 3).UTC(),
+			Time: now.Add(-time.Minute * 3).UTC(),
 			Location: &Location{
 				Latitude:  33.850422561365455,
 				Longitude: -118.3962470088937,
 			},
 		},
 		End: Endpoint{
-			Time: time.Now().Add(-time.Minute * 2).UTC(),
+			Time: now.Add(-time.Minute * 2).UTC(),
 			Location: &Location{
 				Latitude:  33.8544585026455,
 				Longitude: -118.39821832237583,
@@ -83,7 +84,7 @@ var segment3 shared.CloudEvent[SegmentEvent] = shared.CloudEvent[SegmentEvent]{
 		ID:       ksuid.New().String(),
 		DeviceID: createDevice.Data.Device.ID,
 		Start: Endpoint{
-			Time: time.Now().Add(-time.Minute * 5).UTC(),
+			Time: now.Add(-time.Minute * 5).UTC(),
 			Location: &Location{
 				Latitude:  33.95737251631686,
 				Longitude: -118.44861917146383,
@@ -245,9 +246,10 @@ func Test_StartLocationNotIncludedInFirstEvent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	startLocOnlyInFinalPayload := segment1
-	segment1.Data.Start.Location = nil
-	if err := consumer.ProcessSegmentEvent(ctx, segment1); err != nil {
+	tripStartPayload := segment1
+	tripStartPayload.Data.Start.Location = nil
+	tripStartPayload.Data.Completed = false
+	if err := consumer.ProcessSegmentEvent(ctx, tripStartPayload); err != nil {
 		t.Fatal(err)
 	}
 
@@ -255,17 +257,17 @@ func Test_StartLocationNotIncludedInFirstEvent(t *testing.T) {
 	assert.False(t, trp.StartPosition.Valid)
 	assert.Equal(t, trp.StartTime, segment1.Data.Start.Time)
 
-	startLocOnlyInFinalPayload.Data.Completed = true
-	if err := consumer.ProcessSegmentEvent(ctx, startLocOnlyInFinalPayload); err != nil {
+	segment1.Data.Completed = true
+	if err := consumer.ProcessSegmentEvent(ctx, segment1); err != nil {
 		t.Fatal(err)
 	}
 	err := trp.Reload(ctx, pdb.DBS().Reader)
 	assert.NoError(t, err)
-	assert.Equal(t, trp.StartPositionEstimate.X, startLocOnlyInFinalPayload.Data.Start.Location.Longitude)
-	assert.Equal(t, trp.StartPositionEstimate.Y, startLocOnlyInFinalPayload.Data.Start.Location.Latitude)
-	assert.Equal(t, trp.EndPosition.X, startLocOnlyInFinalPayload.Data.End.Location.Longitude)
-	assert.Equal(t, trp.EndPosition.Y, startLocOnlyInFinalPayload.Data.End.Location.Latitude)
-	assert.Equal(t, trp.EndTime.Time, startLocOnlyInFinalPayload.Data.End.Time)
+	assert.Equal(t, trp.StartPositionEstimate.X, segment1.Data.Start.Location.Longitude)
+	assert.Equal(t, trp.StartPositionEstimate.Y, segment1.Data.Start.Location.Latitude)
+	assert.Equal(t, trp.EndPosition.X, segment1.Data.End.Location.Longitude)
+	assert.Equal(t, trp.EndPosition.Y, segment1.Data.End.Location.Latitude)
+	assert.Equal(t, trp.EndTime.Time, segment1.Data.End.Time)
 
 }
 
