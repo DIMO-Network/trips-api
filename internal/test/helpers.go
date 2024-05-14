@@ -41,7 +41,7 @@ func StartContainerDatabase(ctx context.Context, t *testing.T, migrationsDirRelP
 	}
 	mappedPort, err := pgContainer.MappedPort(ctx, nat.Port(pgPort))
 	if err != nil {
-		return handleContainerStartErr(ctx, errors.Wrap(err, "failed to get container external port"), t)
+		return handleContainerStartErr(ctx, fmt.Errorf("failed to get container external port: %w", err), t)
 	}
 	fmt.Printf("postgres container session %s ready and running at port: %s \n", pgContainer.SessionID(), mappedPort)
 	//defer pgContainer.Terminate(ctx) // this should be done by the caller
