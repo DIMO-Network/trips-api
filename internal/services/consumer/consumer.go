@@ -137,8 +137,7 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 			),
 		).One(ctx, c.pg.DB.DBS().Reader); err != nil {
 			c.logger.Error().Err(err).Msg("failed to find vehicle for trip completion estimate")
-		} else {
-			if len(veh.R.VehicleTokenTrips) > 0 {
+		} else if len(veh.R.VehicleTokenTrips) > 0 {
 				estLoc := nullLocationToDB(event.Data.Start.Location)
 				if lastLoc := veh.R.VehicleTokenTrips[0].EndPosition; lastLoc.Valid && geo.InterpolateTripStart(lastLoc.Point, estLoc.Point) {
 					segment.StartPositionEstimate = lastLoc
