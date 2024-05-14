@@ -4,12 +4,13 @@ import (
 	"database/sql"
 	"math"
 	"strconv"
-	"time"
 
+	"github.com/DIMO-Network/trips-api/internal/api/types"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/gofiber/fiber/v2"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
+	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
 
 type Handler struct {
@@ -29,7 +30,7 @@ const pageSize = 100
 //	@Security		BearerAuth
 //	@Param			tokenId	path		int	true	"Vehicle token id"
 //	@Param			page	query		int	false	"Page of trips to retrieve. Defaults to 1."
-//	@Success		200		{object}	api.VehicleTripsResp
+//	@Success		200		{object}	types.VehicleTrips
 //	@Router			/vehicle/{tokenId}/trips [get]
 func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 	rawTokenID := c.Params("tokenID")
@@ -51,17 +52,14 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	mods := []qm.QueryMod{
-		qm.OrderBy(models.TripColumns.EndTime + " DESC"),
-		qm.Limit(pageSize),
-		qm.Offset((p.Page - 1) * pageSize),
-	}
-
 	v, err := models.Vehicles(
 		models.VehicleWhere.TokenID.EQ(tokenID),
 		qm.Load(
 			models.VehicleRels.VehicleTokenTrips,
-			mods...,
+			models.TripWhere.EndTime.IsNotNull(),
+			qm.OrderBy(models.TripColumns.EndTime+" DESC"),
+			qm.Limit(pageSize),
+			qm.Offset((p.Page-1)*pageSize),
 		),
 	).One(c.Context(), h.pg.DB.DBS().Reader)
 	if err != nil {
@@ -71,30 +69,28 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	out := VehicleTripsResp{
-		Trips:       make([]VehicleTripResp, len(v.R.VehicleTokenTrips)),
+	resp := types.VehicleTrips{
+		Trips:       make([]types.TripDetails, len(v.R.VehicleTokenTrips)),
 		CurrentPage: p.Page,
 		TotalPages:  int(math.Ceil(float64(totalCount) / pageSize)),
 	}
 
-	for i, tripRow := range v.R.VehicleTokenTrips {
-		tripOut := VehicleTripResp{
-			ID: tripRow.ID,
-			Start: Endpoint{
-				Time: tripRow.StartTime,
+	for i, trp := range v.R.VehicleTokenTrips {
+		resp.Trips[i] = types.TripDetails{
+			ID: trp.ID,
+			Start: types.TripStart{
+				Time:              trp.StartTime,
+				Location:          nullLocationToAPI(trp.StartPosition),
+				EstimatedLocation: nullLocationToAPI(trp.StartPositionEstimate),
+			},
+			End: types.TripEnd{
+				Time:     trp.EndTime.Time,
+				Location: nullLocationToAPI(trp.EndPosition),
 			},
 		}
-
-		if tripRow.EndTime.Valid {
-			tripOut.End = &Endpoint{
-				Time: tripRow.EndTime.Time,
-			}
-		}
-
-		out.Trips[i] = tripOut
 	}
 
-	return c.JSON(out)
+	return c.JSON(resp)
 }
 
 func validateQueryParams(p *Params, c *fiber.Ctx) error {
@@ -110,21 +106,12 @@ func validateQueryParams(p *Params, c *fiber.Ctx) error {
 }
 
 type Params struct {
-	Page int `json:"page"`
+	Page int `query:"page"`
 }
 
-type VehicleTripsResp struct {
-	Trips       []VehicleTripResp `json:"trips"`
-	TotalPages  int               `json:"totalPages" example:"1"`
-	CurrentPage int               `json:"currentPage" example:"1"`
-}
-
-type VehicleTripResp struct {
-	ID    string    `json:"id" example:"2Y83IHPItgk0uHD7hybGnA776Bo"`
-	Start Endpoint  `json:"start"`
-	End   *Endpoint `json:"end"`
-}
-
-type Endpoint struct {
-	Time time.Time `json:"time" example:"2023-05-04T09:00:00Z"`
+func nullLocationToAPI(l pgeo.NullPoint) *types.Location {
+	if l.Valid {
+		return &types.Location{Latitude: l.Y, Longitude: l.X}
+	}
+	return nil
 }
