@@ -111,7 +111,9 @@ func Test_CreateVehicle(t *testing.T) {
 	assert.Equal(t, v.UserDeviceID, createDevice.Data.Device.ID)
 }
 
-func Test_TripStartTripWithGeos(t *testing.T) {
+// First trip a user takes
+// Includes geo data
+func Test_TripWithGeos(t *testing.T) {
 	ctx := context.Background()
 
 	pdb := test.StartContainerDatabase(ctx, t, migrationsDirRelPath)
@@ -146,6 +148,9 @@ func Test_TripStartTripWithGeos(t *testing.T) {
 
 }
 
+// New user trip (has a prev trip)
+// Current trip includes start geo
+// Interpolate start estimate based on end of last trip
 func Test_NewTripEstimateStart(t *testing.T) {
 	ctx := context.Background()
 	pdb := test.StartContainerDatabase(ctx, t, migrationsDirRelPath)
@@ -183,6 +188,9 @@ func Test_NewTripEstimateStart(t *testing.T) {
 
 }
 
+// New user trip (has a prev trip)
+// Current trip includes start geo
+// Do not interpolate start estimate bc new start loc is too far from prev trip end
 func Test_NewTripDontEstimateStart(t *testing.T) {
 	ctx := context.Background()
 	pdb := test.StartContainerDatabase(ctx, t, migrationsDirRelPath)
@@ -220,6 +228,9 @@ func Test_NewTripDontEstimateStart(t *testing.T) {
 	assert.Equal(t, newTripNoEst.StartPosition.Y, segment3.Data.Start.Location.Latitude)
 }
 
+// New user trip
+// Trip start event does not include geo
+// Trip completion event includes start geo, populate Start Estimate with this
 func Test_StartLocationNotIncludedInFirstEvent(t *testing.T) {
 	ctx := context.Background()
 	pdb := test.StartContainerDatabase(ctx, t, migrationsDirRelPath)
@@ -258,6 +269,10 @@ func Test_StartLocationNotIncludedInFirstEvent(t *testing.T) {
 
 }
 
+// New user trip (has prev trip)
+// Trip start event does not include geo
+// Trip completion event includes start geo
+// Based on trip completion, estimate a start loc based on prev trip and new trip start
 func Test_EstimateStartOnCompletion(t *testing.T) {
 	ctx := context.Background()
 	pdb := test.StartContainerDatabase(ctx, t, migrationsDirRelPath)
