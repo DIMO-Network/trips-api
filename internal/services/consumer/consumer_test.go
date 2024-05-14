@@ -29,7 +29,7 @@ var createDevice shared.CloudEvent[UserDeviceMintEvent] = shared.CloudEvent[User
 			ID: ksuid.New().String(),
 		},
 		NFT: struct {
-			TokenID int "json:\"tokenId\""
+			TokenID int `json:"tokenId"`
 		}{
 			TokenID: 1,
 		},
