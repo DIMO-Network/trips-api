@@ -24,7 +24,7 @@ var createDevice shared.CloudEvent[UserDeviceMintEvent] = shared.CloudEvent[User
 	Type: UserDeviceMintEventType,
 	Data: UserDeviceMintEvent{
 		Device: struct {
-			ID string "json:\"id\""
+			ID string `json:"id"`
 		}{
 			ID: ksuid.New().String(),
 		},
