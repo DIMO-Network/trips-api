@@ -18,7 +18,6 @@ import (
 
 var (
 	migrationsDirRelPath = "../../../migrations"
-	now                  = time.Now()
 )
 
 var createDevice shared.CloudEvent[UserDeviceMintEvent] = shared.CloudEvent[UserDeviceMintEvent]{
@@ -42,14 +41,14 @@ var segment1 shared.CloudEvent[SegmentEvent] = shared.CloudEvent[SegmentEvent]{
 		ID:       ksuid.New().String(),
 		DeviceID: createDevice.Data.Device.ID,
 		Start: Endpoint{
-			Time: now.Add(-time.Hour * 3 * 24).UTC(),
+			Time: time.Date(2023, 8, 16, 12, 15, 2, 0, time.UTC),
 			Location: &Location{
 				Latitude:  40.744331740800455,
 				Longitude: -73.98043334522801,
 			},
 		},
 		End: Endpoint{
-			Time: now.Add(-time.Hour * 30).UTC(),
+			Time: time.Date(2023, 8, 18, 8, 15, 2, 0, time.UTC),
 			Location: &Location{
 				Latitude:  33.84805567103969,
 				Longitude: -118.39318923141917,
@@ -63,14 +62,14 @@ var segment2 shared.CloudEvent[SegmentEvent] = shared.CloudEvent[SegmentEvent]{
 		ID:       ksuid.New().String(),
 		DeviceID: createDevice.Data.Device.ID,
 		Start: Endpoint{
-			Time: now.Add(-time.Minute * 3).UTC(),
+			Time: time.Date(2023, 8, 18, 8, 18, 2, 0, time.UTC),
 			Location: &Location{
 				Latitude:  33.850422561365455,
 				Longitude: -118.3962470088937,
 			},
 		},
 		End: Endpoint{
-			Time: now.Add(-time.Minute * 2).UTC(),
+			Time: time.Date(2023, 8, 18, 8, 25, 2, 0, time.UTC),
 			Location: &Location{
 				Latitude:  33.8544585026455,
 				Longitude: -118.39821832237583,
@@ -84,7 +83,7 @@ var segment3 shared.CloudEvent[SegmentEvent] = shared.CloudEvent[SegmentEvent]{
 		ID:       ksuid.New().String(),
 		DeviceID: createDevice.Data.Device.ID,
 		Start: Endpoint{
-			Time: now.Add(-time.Minute * 5).UTC(),
+			Time: time.Date(2023, 8, 18, 8, 18, 2, 0, time.UTC),
 			Location: &Location{
 				Latitude:  33.95737251631686,
 				Longitude: -118.44861917146383,
@@ -267,7 +266,7 @@ func Test_StartLocationNotIncludedInFirstEvent(t *testing.T) {
 	assert.Equal(t, trp.StartPositionEstimate.Y, segment1.Data.Start.Location.Latitude)
 	assert.Equal(t, trp.EndPosition.X, segment1.Data.End.Location.Longitude)
 	assert.Equal(t, trp.EndPosition.Y, segment1.Data.End.Location.Latitude)
-	assert.Equal(t, trp.EndTime.Time, segment1.Data.End.Time)
+	assert.True(t, trp.EndTime.Time.Equal(segment1.Data.End.Time))
 
 }
 
@@ -324,6 +323,6 @@ func Test_EstimateStartOnCompletion(t *testing.T) {
 	assert.Equal(t, estTrp.StartPositionEstimate.Y, trp1.EndPosition.Y)
 	assert.Equal(t, estTrp.EndPosition.X, completed.Data.End.Location.Longitude)
 	assert.Equal(t, estTrp.EndPosition.Y, completed.Data.End.Location.Latitude)
-	assert.Equal(t, estTrp.EndTime.Time, completed.Data.End.Time)
+	assert.True(t, estTrp.EndTime.Time.Equal(segment2.Data.End.Time))
 
 }
