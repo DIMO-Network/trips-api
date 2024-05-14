@@ -92,8 +92,7 @@ $$ LANGUAGE plpgsql;
 
 func handleContainerStartErr(ctx context.Context, err error, t *testing.T) db.Store {
 	if err != nil {
-		fmt.Println("start container error: " + err.Error())
-		t.Fatal(err)
+		t.Fatalf("start container error: %s", err.Error())
 	}
 	return db.Store{}
 }
