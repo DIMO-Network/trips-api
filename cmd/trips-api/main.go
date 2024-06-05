@@ -15,15 +15,14 @@ import (
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/api"
 	"github.com/DIMO-Network/trips-api/internal/config"
-	"github.com/ethereum/go-ethereum/common"
-
-	jwtware "github.com/gofiber/contrib/jwt"
-
 	"github.com/DIMO-Network/trips-api/internal/database"
 	"github.com/DIMO-Network/trips-api/internal/services/bundlr"
 	"github.com/DIMO-Network/trips-api/internal/services/consumer"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/goccy/go-json"
+	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/swagger"
@@ -105,7 +104,12 @@ func main() {
 
 	logger.Info().Interface("settings", settings.PrivilegeJWKURL).Msg("Settings")
 
-	app := fiber.New()
+	app := fiber.New(
+		fiber.Config{
+			JSONEncoder: json.Marshal,
+			JSONDecoder: json.Unmarshal,
+		},
+	)
 	v1 := app.Group("/v1")
 	v1.Get("/swagger/*", swagger.HandlerDefault)
 
