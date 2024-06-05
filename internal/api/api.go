@@ -1,7 +1,6 @@
 package api
 
 import (
-	"database/sql"
 	"math"
 	"strconv"
 	"time"
@@ -64,9 +63,6 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 		qm.Offset((p.Page-1)*pageSize),
 	).All(c.Context(), h.pg.DB.DBS().Reader)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return fiber.NewError(fiber.StatusNotFound, "No vehicle with that token id.")
-		}
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 	h.logger.Info().Int("vehicleTokenId", tokenID).Str("duration", time.Since(start).String()).Msg("Ran trips query.")
