@@ -12,7 +12,7 @@ env:
   JWT_KEY_SET_URL: https://auth.dimo.zone/keys
   DEVICES_API_GRPC_ADDR: devices-api-prod:8086
   ELASTIC_INDEX: devices-status-prod-*
-  DATA_FETCH_ENABLED: true
+  DATA_FETCH_ENABLED: false
   BUNDLR_ENABLED: false
   PRIVILEGE_JWK_URL: http://dex-roles-rights-prod.prod.svc.cluster.local:5556/keys
   VEHICLE_NFT_ADDR: '0xba5738a18d83d41847dffbdc6101d37c69c9b0cf'
