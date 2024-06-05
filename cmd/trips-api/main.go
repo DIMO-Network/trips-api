@@ -120,7 +120,7 @@ func main() {
 	})
 	vehicleAddr := common.HexToAddress(settings.VehicleNFTAddr)
 
-	handler := api.NewHandler(pgStore)
+	handler := api.NewHandler(pgStore, &logger)
 	v1.Get("/vehicle/:tokenID/trips", privilegeJWT, privilege.OneOf(vehicleAddr, []int64{4}), handler.GetVehicleTrips)
 
 	go func() {

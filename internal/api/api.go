@@ -4,21 +4,24 @@ import (
 	"database/sql"
 	"math"
 	"strconv"
+	"time"
 
 	"github.com/DIMO-Network/trips-api/internal/api/types"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
 	"github.com/DIMO-Network/trips-api/models"
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"github.com/volatiletech/sqlboiler/v4/types/pgeo"
 )
 
 type Handler struct {
-	pg *pg_store.Store
+	pg     *pg_store.Store
+	logger *zerolog.Logger
 }
 
-func NewHandler(pgStore *pg_store.Store) *Handler {
-	return &Handler{pgStore}
+func NewHandler(pgStore *pg_store.Store, logger *zerolog.Logger) *Handler {
+	return &Handler{pgStore, logger}
 }
 
 const pageSize = 100
@@ -52,30 +55,29 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
 
-	v, err := models.Vehicles(
-		models.VehicleWhere.TokenID.EQ(tokenID),
-		qm.Load(
-			models.VehicleRels.VehicleTokenTrips,
-			models.TripWhere.EndTime.IsNotNull(),
-			qm.OrderBy(models.TripColumns.EndTime+" DESC"),
-			qm.Limit(pageSize),
-			qm.Offset((p.Page-1)*pageSize),
-		),
-	).One(c.Context(), h.pg.DB.DBS().Reader)
+	start := time.Now()
+	trips, err := models.Trips(
+		models.TripWhere.VehicleTokenID.EQ(tokenID),
+		models.TripWhere.EndTime.IsNotNull(),
+		qm.OrderBy(models.TripColumns.EndTime+" DESC"),
+		qm.Limit(pageSize),
+		qm.Offset((p.Page-1)*pageSize),
+	).All(c.Context(), h.pg.DB.DBS().Reader)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fiber.NewError(fiber.StatusNotFound, "No vehicle with that token id.")
 		}
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}
+	h.logger.Info().Int("vehicleTokenId", tokenID).Str("duration", time.Since(start).String()).Msg("Ran trips query.")
 
 	resp := types.VehicleTrips{
-		Trips:       make([]types.TripDetails, len(v.R.VehicleTokenTrips)),
+		Trips:       make([]types.TripDetails, len(trips)),
 		CurrentPage: p.Page,
 		TotalPages:  int(math.Ceil(float64(totalCount) / pageSize)),
 	}
 
-	for i, trp := range v.R.VehicleTokenTrips {
+	for i, trp := range trips {
 		resp.Trips[i] = types.TripDetails{
 			ID: trp.ID,
 			Start: types.TripStart{
