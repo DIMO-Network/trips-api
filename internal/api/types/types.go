@@ -9,9 +9,10 @@ type VehicleTrips struct {
 }
 
 type TripDetails struct {
-	ID    string    `json:"id" example:"2Y83IHPItgk0uHD7hybGnA776Bo"`
-	Start TripStart `json:"start"`
-	End   TripEnd   `json:"end"`
+	ID      string    `json:"id" example:"2Y83IHPItgk0uHD7hybGnA776Bo"`
+	Start   TripStart `json:"start"`
+	End     TripEnd   `json:"end"`
+	Dropped bool      `json:"droppedData"`
 }
 
 type TripStart struct {

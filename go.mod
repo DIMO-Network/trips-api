@@ -3,20 +3,20 @@ module github.com/DIMO-Network/trips-api
 go 1.21
 
 require (
+	github.com/docker/go-connections v0.5.0
 	github.com/elastic/go-elasticsearch/v8 v8.11.0
+	github.com/ethereum/go-ethereum v1.13.4
 	github.com/friendsofgo/errors v0.9.2
 	github.com/gofiber/contrib/jwt v1.0.9
 	github.com/gofiber/fiber/v2 v2.52.4
 	github.com/gofiber/swagger v0.1.14
+	github.com/pressly/goose/v3 v3.20.0
 	github.com/prometheus/client_golang v1.17.0
 	github.com/stretchr/testify v1.9.0
 	github.com/swaggo/swag v1.16.2
-	github.com/volatiletech/strmangle v0.0.5
-	github.com/warp-contracts/syncer v0.2.39
-	github.com/docker/go-connections v0.5.0
-	github.com/ethereum/go-ethereum v1.13.4
-	github.com/pressly/goose/v3 v3.20.0
 	github.com/testcontainers/testcontainers-go v0.30.0
+	github.com/volatiletech/strmangle v0.0.6
+	github.com/warp-contracts/syncer v0.2.39
 )
 
 require (

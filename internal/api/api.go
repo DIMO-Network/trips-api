@@ -85,6 +85,7 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 				Time:     trp.EndTime.Time,
 				Location: nullLocationToAPI(trp.EndPosition),
 			},
+			Dropped: trp.DroppedData,
 		}
 	}
 

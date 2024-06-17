@@ -100,6 +100,10 @@ func (c *Consumer) BeginSegment(ctx context.Context, event shared.CloudEvent[Seg
 	if segment.StartPosition.Valid && len(veh.R.VehicleTokenTrips) > 0 {
 		if lastLoc := veh.R.VehicleTokenTrips[0].EndPosition; lastLoc.Valid && geo.InterpolateTripStart(lastLoc.Point, segment.StartPosition.Point) {
 			segment.StartPositionEstimate = lastLoc
+			segment.DroppedData = true
+		} else {
+			// if new trip start is greater than allowable distance, we still want to indicate there was dropped data
+			segment.DroppedData = true
 		}
 	}
 
@@ -141,6 +145,10 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 			estLoc := nullLocationToDB(event.Data.Start.Location)
 			if lastLoc := veh.R.VehicleTokenTrips[0].EndPosition; lastLoc.Valid && geo.InterpolateTripStart(lastLoc.Point, estLoc.Point) {
 				segment.StartPositionEstimate = lastLoc
+				segment.DroppedData = true
+			} else {
+				// if new trip start is greater than allowable distance, we still want to indicate there was dropped data
+				segment.DroppedData = true
 			}
 		}
 	}
