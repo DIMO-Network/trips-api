@@ -11,7 +11,6 @@ import (
 
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/kafka"
-	"github.com/DIMO-Network/shared/middleware/privilegetoken"
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/api"
 	"github.com/DIMO-Network/trips-api/internal/config"
@@ -20,9 +19,7 @@ import (
 	"github.com/DIMO-Network/trips-api/internal/services/consumer"
 	es_store "github.com/DIMO-Network/trips-api/internal/services/es"
 	pg_store "github.com/DIMO-Network/trips-api/internal/services/pg"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/goccy/go-json"
-	jwtware "github.com/gofiber/contrib/jwt"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/swagger"
@@ -115,17 +112,18 @@ func main() {
 
 	go serveMonitoring(settings.MonPort, &logger) //nolint
 
-	privilegeJWT := jwtware.New(jwtware.Config{
-		JWKSetURLs: []string{settings.PrivilegeJWKURL},
-	})
+	// privilegeJWT := jwtware.New(jwtware.Config{
+	// 	JWKSetURLs: []string{settings.PrivilegeJWKURL},
+	// })
 
-	privilege := privilegetoken.New(privilegetoken.Config{
-		Log: &logger,
-	})
-	vehicleAddr := common.HexToAddress(settings.VehicleNFTAddr)
+	// privilege := privilegetoken.New(privilegetoken.Config{
+	// 	Log: &logger,
+	// })
+	// vehicleAddr := common.HexToAddress(settings.VehicleNFTAddr)
 
 	handler := api.NewHandler(pgStore, &logger)
-	v1.Get("/vehicle/:tokenID/trips", privilegeJWT, privilege.OneOf(vehicleAddr, []int64{4}), handler.GetVehicleTrips)
+	// v1.Get("/vehicle/:tokenID/trips", privilegeJWT, privilege.OneOf(vehicleAddr, []int64{4}), handler.GetVehicleTrips)
+	v1.Get("/vehicle/:tokenID/trips", handler.GetVehicleTrips)
 
 	go func() {
 		logger.Info().Msgf("Starting API server on port %s.", settings.Port)
