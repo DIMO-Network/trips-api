@@ -68,6 +68,9 @@ const docTemplate = `{
         "types.TripDetails": {
             "type": "object",
             "properties": {
+                "droppedData": {
+                    "type": "boolean"
+                },
                 "end": {
                     "$ref": "#/definitions/types.TripEnd"
                 },
@@ -94,9 +97,6 @@ const docTemplate = `{
         "types.TripStart": {
             "type": "object",
             "properties": {
-                "droppedData": {
-                    "type": "boolean"
-                },
                 "estimatedLocation": {
                     "$ref": "#/definitions/types.Location"
                 },

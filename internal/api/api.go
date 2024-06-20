@@ -80,12 +80,12 @@ func (h *Handler) GetVehicleTrips(c *fiber.Ctx) error {
 				Time:              trp.StartTime,
 				Location:          nullLocationToAPI(trp.StartPosition),
 				EstimatedLocation: nullLocationToAPI(trp.StartPositionEstimate),
-				DroppedData:       trp.DroppedData,
 			},
 			End: types.TripEnd{
 				Time:     trp.EndTime.Time,
 				Location: nullLocationToAPI(trp.EndPosition),
 			},
+			Dropped: trp.DroppedData,
 		}
 	}
 

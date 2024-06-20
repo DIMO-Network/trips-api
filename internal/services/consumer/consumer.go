@@ -111,7 +111,7 @@ func (c *Consumer) BeginSegment(ctx context.Context, event shared.CloudEvent[Seg
 			}
 		}
 	} else {
-		// anytime we dont get location in trip start event
+		// anytime we get invalid location in trip start event
 		// indicate dropped data
 		segment.DroppedData = true
 	}

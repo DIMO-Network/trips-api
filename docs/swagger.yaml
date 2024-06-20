@@ -8,6 +8,8 @@ definitions:
     type: object
   types.TripDetails:
     properties:
+      droppedData:
+        type: boolean
       end:
         $ref: '#/definitions/types.TripEnd'
       id:
@@ -25,8 +27,6 @@ definitions:
     type: object
   types.TripStart:
     properties:
-      droppedData:
-        type: boolean
       estimatedLocation:
         $ref: '#/definitions/types.Location'
       location:
