@@ -97,14 +97,23 @@ func (c *Consumer) BeginSegment(ctx context.Context, event shared.CloudEvent[Seg
 		StartPosition:  nullLocationToDB(event.Data.Start.Location),
 	}
 
-	if segment.StartPosition.Valid && len(veh.R.VehicleTokenTrips) > 0 {
-		if lastLoc := veh.R.VehicleTokenTrips[0].EndPosition; lastLoc.Valid && geo.InterpolateTripStart(lastLoc.Point, segment.StartPosition.Point) {
-			segment.StartPositionEstimate = lastLoc
-			segment.DroppedData = true
-		} else {
-			// if new trip start is greater than allowable distance, we still want to indicate there was dropped data
-			segment.DroppedData = true
+	if segment.StartPosition.Valid {
+		if len(veh.R.VehicleTokenTrips) > 0 {
+			if lastLoc := veh.R.VehicleTokenTrips[0].EndPosition; lastLoc.Valid {
+				if lastLoc.Point != segment.StartPosition.Point {
+					// if new trip does not start where last trip ended, indicate dropped data
+					segment.DroppedData = true
+				}
+				// only estimate start position if last trip ended within threshold distance
+				if geo.InterpolateTripStart(lastLoc.Point, segment.StartPosition.Point) {
+					segment.StartPositionEstimate = lastLoc
+				}
+			}
 		}
+	} else {
+		// anytime we get invalid location in trip start event
+		// indicate dropped data
+		segment.DroppedData = true
 	}
 
 	return segment.Insert(ctx, c.pg.DB.DBS().Writer, boil.Infer())
@@ -145,10 +154,6 @@ func (c *Consumer) CompleteSegment(ctx context.Context, event shared.CloudEvent[
 			estLoc := nullLocationToDB(event.Data.Start.Location)
 			if lastLoc := veh.R.VehicleTokenTrips[0].EndPosition; lastLoc.Valid && geo.InterpolateTripStart(lastLoc.Point, estLoc.Point) {
 				segment.StartPositionEstimate = lastLoc
-				segment.DroppedData = true
-			} else {
-				// if new trip start is greater than allowable distance, we still want to indicate there was dropped data
-				segment.DroppedData = true
 			}
 		}
 	}

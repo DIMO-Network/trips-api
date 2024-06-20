@@ -134,7 +134,9 @@ func Test_TripWithGeos(t *testing.T) {
 	trp, _ := models.Trips(models.TripWhere.ID.EQ(segment1.Data.ID)).One(ctx, pdb.DBS().Reader)
 	assert.Equal(t, trp.StartPosition.X, segment1.Data.Start.Location.Longitude)
 	assert.Equal(t, trp.StartPosition.Y, segment1.Data.Start.Location.Latitude)
+	assert.Equal(t, trp.StartPosition.Y, segment1.Data.Start.Location.Latitude)
 	assert.Equal(t, trp.StartTime, segment1.Data.Start.Time)
+	assert.Equal(t, false, trp.DroppedData)
 
 	segment1.Data.Completed = true
 	if err := consumer.ProcessSegmentEvent(ctx, segment1); err != nil {
@@ -145,6 +147,7 @@ func Test_TripWithGeos(t *testing.T) {
 	assert.Equal(t, trp.EndPosition.X, segment1.Data.End.Location.Longitude)
 	assert.Equal(t, trp.EndPosition.Y, segment1.Data.End.Location.Latitude)
 	assert.Equal(t, trp.EndTime.Time, segment1.Data.End.Time)
+	assert.Equal(t, false, trp.DroppedData)
 
 }
 
@@ -185,12 +188,14 @@ func Test_NewTripEstimateStart(t *testing.T) {
 	estTrp, _ := models.Trips(models.TripWhere.ID.EQ(segment2.Data.ID)).One(ctx, pdb.DBS().Reader)
 	assert.Equal(t, estTrp.StartPositionEstimate.X, segment1.Data.End.Location.Longitude)
 	assert.Equal(t, estTrp.StartPositionEstimate.Y, segment1.Data.End.Location.Latitude)
+	assert.Equal(t, estTrp.DroppedData, true)
 
 }
 
 // New user trip (has a prev trip)
 // Current trip includes start geo
 // Do not interpolate start estimate bc new start loc is too far from prev trip end
+// Still indicate that we have dropped data
 func Test_NewTripDontEstimateStart(t *testing.T) {
 	ctx := context.Background()
 	pdb := test.StartContainerDatabase(ctx, t, migrationsDirRelPath)
@@ -226,6 +231,7 @@ func Test_NewTripDontEstimateStart(t *testing.T) {
 	assert.False(t, newTripNoEst.StartPositionEstimate.Valid)
 	assert.Equal(t, newTripNoEst.StartPosition.X, segment3.Data.Start.Location.Longitude)
 	assert.Equal(t, newTripNoEst.StartPosition.Y, segment3.Data.Start.Location.Latitude)
+	assert.Equal(t, true, newTripNoEst.DroppedData)
 }
 
 // New user trip
@@ -267,7 +273,7 @@ func Test_StartLocationNotIncludedInFirstEvent(t *testing.T) {
 	assert.Equal(t, trp.EndPosition.X, segment1.Data.End.Location.Longitude)
 	assert.Equal(t, trp.EndPosition.Y, segment1.Data.End.Location.Latitude)
 	assert.True(t, trp.EndTime.Time.Equal(segment1.Data.End.Time))
-
+	assert.True(t, trp.DroppedData)
 }
 
 // New user trip (has prev trip)
@@ -310,6 +316,7 @@ func Test_EstimateStartOnCompletion(t *testing.T) {
 	estTrp, _ := models.Trips(models.TripWhere.ID.EQ(segment2.Data.ID)).One(ctx, pdb.DBS().Reader)
 	assert.False(t, estTrp.StartPosition.Valid)
 	assert.Equal(t, estTrp.StartTime, segment2.Data.Start.Time)
+	assert.True(t, estTrp.DroppedData)
 
 	completed.Data.Completed = true
 	if err := consumer.ProcessSegmentEvent(ctx, completed); err != nil {
