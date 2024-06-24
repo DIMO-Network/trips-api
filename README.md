@@ -7,6 +7,7 @@ flowchart LR
 ```
 
 Trip opening:
+
 ```
 {
   …,
@@ -27,4 +28,8 @@ Trip opening:
 goose -dir migrations create <migration_name> sql
 ```
 
-GitHub? Hello?
+### Swagger
+
+```
+swag init -g ./cmd/trips-api/main.go --parseDependency --parseInternal --parseDepth 2
+```
