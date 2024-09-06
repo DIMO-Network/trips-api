@@ -1,40 +1,41 @@
+basePath: /v1
 definitions:
-  types.Location:
+  github_com_DIMO-Network_trips-api_internal_api_types.Location:
     properties:
       latitude:
         type: number
       longitude:
         type: number
     type: object
-  types.TripDetails:
+  github_com_DIMO-Network_trips-api_internal_api_types.TripDetails:
     properties:
       droppedData:
         type: boolean
       end:
-        $ref: '#/definitions/types.TripEnd'
+        $ref: '#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.TripEnd'
       id:
         example: 2Y83IHPItgk0uHD7hybGnA776Bo
         type: string
       start:
-        $ref: '#/definitions/types.TripStart'
+        $ref: '#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.TripStart'
     type: object
-  types.TripEnd:
+  github_com_DIMO-Network_trips-api_internal_api_types.TripEnd:
     properties:
       location:
-        $ref: '#/definitions/types.Location'
+        $ref: '#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.Location'
       time:
         type: string
     type: object
-  types.TripStart:
+  github_com_DIMO-Network_trips-api_internal_api_types.TripStart:
     properties:
       estimatedLocation:
-        $ref: '#/definitions/types.Location'
+        $ref: '#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.Location'
       location:
-        $ref: '#/definitions/types.Location'
+        $ref: '#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.Location'
       time:
         type: string
     type: object
-  types.VehicleTrips:
+  github_com_DIMO-Network_trips-api_internal_api_types.VehicleTrips:
     properties:
       currentPage:
         example: 1
@@ -44,11 +45,14 @@ definitions:
         type: integer
       trips:
         items:
-          $ref: '#/definitions/types.TripDetails'
+          $ref: '#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.TripDetails'
         type: array
     type: object
 info:
   contact: {}
+  description: segments
+  title: DIMO Segment API
+  version: "1.0"
 paths:
   /vehicle/{tokenId}/trips:
     get:
@@ -69,7 +73,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/types.VehicleTrips'
+            $ref: '#/definitions/github_com_DIMO-Network_trips-api_internal_api_types.VehicleTrips'
       security:
       - BearerAuth: []
 securityDefinitions:
