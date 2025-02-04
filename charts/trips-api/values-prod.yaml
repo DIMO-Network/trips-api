@@ -7,6 +7,7 @@ cronJob:
   enabled: false
   schedule: 0 0 * * 0
 env:
+  DB_SSL_MODE: disable
   ENVIRONMENT: prod
   KAFKA_BROKERS: kafka-prod-dimo-kafka-kafka-brokers:9092
   JWT_KEY_SET_URL: https://auth.dimo.zone/keys

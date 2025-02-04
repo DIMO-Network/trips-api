@@ -27,6 +27,7 @@ env:
   ENVIRONMENT: dev
   DB_PORT: 5432
   DB_NAME: trips_api
+  DB_SSL_MODE: require
   KAFKA_BROKERS: kafka-dev-dimo-kafka-kafka-brokers:9092
   JWT_KEY_SET_URL: https://auth.dev.dimo.zone/keys
   ELASTIC_INDEX: devices-status-dev-*
