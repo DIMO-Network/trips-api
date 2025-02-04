@@ -12,6 +12,7 @@ import (
 	"github.com/DIMO-Network/shared"
 	"github.com/DIMO-Network/shared/kafka"
 	"github.com/DIMO-Network/shared/middleware/privilegetoken"
+	"github.com/DIMO-Network/shared/privileges"
 	_ "github.com/DIMO-Network/trips-api/docs"
 	"github.com/DIMO-Network/trips-api/internal/api"
 	"github.com/DIMO-Network/trips-api/internal/config"
@@ -125,7 +126,7 @@ func main() {
 	vehicleAddr := common.HexToAddress(settings.VehicleNFTAddr)
 
 	handler := api.NewHandler(pgStore, &logger)
-	v1.Get("/vehicle/:tokenID/trips", privilegeJWT, privilege.OneOf(vehicleAddr, []int64{4}), handler.GetVehicleTrips)
+	v1.Get("/vehicle/:tokenID/trips", privilegeJWT, privilege.OneOf(vehicleAddr, []privileges.Privilege{privileges.VehicleAllTimeLocation}), handler.GetVehicleTrips)
 
 	go func() {
 		logger.Info().Msgf("Starting API server on port %s.", settings.Port)
